@@ -9,7 +9,7 @@
 
 Фотограф загружает съёмку и выдаёт гостевую ссылку. Участник добавляет селфи, проверяет найденные кадры и скачивает свою подборку. Поиск работает на компьютере фотографа. [Интерфейс](web/app.js), [путь данных](docs/ARCHITECTURE.md).
 
-**[Смотреть демо](demo/faceflow-demo.mp4)** · **[Запустить](#запуск-на-windows)** · **[План](PLAN.md)** · **[Для агента](AGENTS.md)** · **[Документация](docs/ARCHITECTURE.md)**
+**[Скачать демо MP4](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4)** · **[Запустить](#запуск-на-windows)** · **[План](PLAN.md)** · **[Для агента](AGENTS.md)** · **[Документация](docs/ARCHITECTURE.md)**
 
 ## Как это выглядит
 
@@ -27,7 +27,7 @@
 
 <img src="demo/frames/viewer.png" alt="Просмотр фотографии: навигация, добавление в подборку, скачивание и отметка чужого кадра" width="820">
 
-[Видео со звуком](demo/faceflow-demo.mp4) · [Повторить демо и пересобрать ролик](docs/DEMO.md)
+[Скачать видео со звуком](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4) · [Повторить демо и пересобрать ролик](docs/DEMO.md)
 
 ## Что работает
 
