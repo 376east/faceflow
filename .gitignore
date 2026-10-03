@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+data/
+work/
+models/*.onnx
+*.sqlite*
+*.log
+demo/voice/
+.DS_Store

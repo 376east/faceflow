@@ -1,0 +1,4 @@
+{
+  "threshold": 0.6,
+  "note": "Inherited local-MVP value. Public fixtures cover functional smoke tests, not independent accuracy calibration."
+}

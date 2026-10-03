@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-04",
+  "synthetic_integration_tests": 8,
+  "independent_accuracy_benchmark": false,
+  "reference_cosine_smoke_same_source": 0.9906,
+  "reference_cosine_smoke_other_source": 0.2136,
+  "browser_search_count": 2,
+  "download_zip": [
+    "001_person-a-02.jpg"
+  ],
+  "browser_console_errors": 0,
+  "video_duration_seconds": 40.066667,
+  "video_resolution": [
+    1920,
+    1080
+  ],
+  "fps": 60,
+  "full_decode": "passed",
+  "voice_alignment": "each phrase inside its scene",
+  "video_sha256": "b8ed6ddffedcad82fafad11499f7a185c91d6e0920a7d3a1185073464e4d3cd4",
+  "setup": "fresh Python 3.12 venv; pinned requirements installed; model downloads and hashes verified",
+  "tts_regeneration": "ran voice_demo.py successfully with edge-tts 7.2.8",
+  "renderer": "ran render_demo.py against saved real browser frames"
+}
