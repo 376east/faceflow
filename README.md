@@ -2,7 +2,7 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"> <img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"> <img src="https://img.shields.io/static/v1?label=%D0%97%D0%B0%D0%BF%D1%83%D1%81%D0%BA&message=%D0%BB%D0%BE%D0%BA%D0%B0%D0%BB%D1%8C%D0%BD%D0%BE&color=blue&labelColor=555&style=flat" alt="Запуск: локально"></p>
+<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4%20%D1%81%D0%BE%20%D0%B7%D0%B2%D1%83%D0%BA%D0%BE%D0%BC&color=blue&labelColor=555&style=flat" alt="Демо: MP4 со звуком"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
 
 **[Демо](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Для агента](AGENTS.md)**
 
@@ -85,7 +85,16 @@ YuNet и SFace - нейросетевые модели, работающие л�
 python -m unittest discover -s tests -v
 ```
 
-[Тесты](tests/test_flow.py) используют настоящие YuNet/SFace на синтетических исходниках; [проверенный прогон и ограничения](docs/VERIFICATION.md).
+[CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. В артефакте `coverage-report` каждого прогона доступны HTML и JSON покрытия строк и ветвей `app.py` и `recognition.py`; это покрытие кода, не точность распознавания. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).
+
+Чтобы измерить покрытие локально:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m coverage run -m unittest discover -s tests -v
+python -m coverage report -m
+python -m coverage html -d work/coverage/html
+```
 
 Для работы и координации изменений: [AGENTS.md](AGENTS.md), [план](PLAN.md), [точки входа](docs/ARCHITECTURE.md), [контракт API](docs/API.md). Для воспроизведения скриншотов, озвучки и монтажа: [инструкции демо](docs/DEMO.md).
 

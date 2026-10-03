@@ -1,0 +1,8 @@
+[run]
+branch = True
+source = .
+data_file = work/coverage/.coverage
+
+[report]
+include = app.py, recognition.py
+show_missing = True
