@@ -2,7 +2,7 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><img src="docs/badges/status.svg" alt="Статус: в разработке" height="24"> <img src="docs/badges/stack.svg" alt="Стек: Python · Flask · OpenCV" height="24"> <img src="docs/badges/mode.svg" alt="Запуск: локально" height="24"></p>
+<p><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"> <img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"> <img src="https://img.shields.io/static/v1?label=%D0%97%D0%B0%D0%BF%D1%83%D1%81%D0%BA&message=%D0%BB%D0%BE%D0%BA%D0%B0%D0%BB%D1%8C%D0%BD%D0%BE&color=blue&labelColor=555&style=flat" alt="Запуск: локально"></p>
 
 **[Демо](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Для агента](AGENTS.md)**
 
