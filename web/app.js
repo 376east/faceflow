@@ -2,6 +2,7 @@
 const root=document.querySelector('#app'),viewer=document.querySelector('#viewer'),frag=new URLSearchParams(location.hash.slice(1));
 if(frag.get('admin')){sessionStorage.setItem('faceflow-admin',frag.get('admin'));history.replaceState(null,'',location.pathname);}
 const adminKey=sessionStorage.getItem('faceflow-admin'),eventId=location.pathname.match(/^\/e\/([^/]+)/)?.[1],guestKey=frag.get('g');
+if(eventId)window.addEventListener('hashchange',()=>{if(new URLSearchParams(location.hash.slice(1)).get('g')!==guestKey)location.reload();});
 let poll,previewUrl,ticket,modalPhoto,feedbackHandler,viewerItems=[],viewerIndex=0,uploadInProgress=false,resultTimer;
 document.body.dataset.mode=eventId?'guest':'photographer';
 if(eventId)document.querySelector('.brand').href=location.href;
@@ -12,7 +13,16 @@ async function confirmAction(message){
 }
 const stat=(id,msg,type='')=>{const el=q('#'+id);if(el){el.textContent=msg;el.className='status '+type;}};
 async function api(path,opt={},guest=false){const headers={...(opt.headers||{}),[guest?'X-Guest-Key':'X-Admin-Key']:guest?guestKey||'':adminKey||''};if(opt.body&&!(opt.body instanceof FormData)){headers['Content-Type']='application/json';opt.body=JSON.stringify(opt.body);}const res=await fetch(path,{...opt,headers});let data={};try{data=await res.json();}catch{}if(!res.ok){const error=Error(data.error||'Не удалось выполнить действие.');error.status=res.status;throw error;}return data;}
-function clear(){clearTimeout(poll);}function fail(m){clear();root.innerHTML='<section class="panel"><h1>Страница не открылась</h1><p>'+esc(m)+'</p></section>';}
+function guestAccessHint(status){
+  if(status===403)return 'Ссылка неполная или больше не действует. Откройте её целиком, включая часть после #. Если не поможет, попросите фотографа прислать актуальную ссылку.';
+  if(status===404)return 'Галерея не найдена. Проверьте ссылку или уточните её у фотографа.';
+  return '';
+}
+function clear(){clearTimeout(poll);}
+function fail(m,retry){
+  clear();root.innerHTML='<section class="panel"><h1>Страница не открылась</h1><p>'+esc(m)+'</p>'+(retry?'<button id="retry-page">Попробовать ещё раз</button>':'')+'</section>';
+  if(retry){const button=q('#retry-page');button.onclick=async()=>{if(button.disabled)return;button.disabled=true;button.textContent='Проверяем…';try{await retry();}finally{button.disabled=false;button.textContent='Попробовать ещё раз';}};}
+}
 function badge(s){return '<span class="badge '+esc(s||'draft')+'">'+({published:'Опубликована',paused:'На паузе',draft:'Черновик'})[s||'draft']+'</span>';}
 function guestLink(id,key){return location.origin+'/e/'+id+'#g='+key;}
 function refreshViewer(){
@@ -73,7 +83,7 @@ async function changeSharing(action){
 }
 function share(e){if(sharingBusy)return;const published=e.status==='published',url=guestLink(id,e.guest),box=q('#sharing'),headerBadge=q('.page-head .badge');if(headerBadge)headerBadge.outerHTML=badge(e.status);box.innerHTML='<h2><span class="section-number" aria-hidden="true">02</span> '+(published?'Ссылка для гостей':'Публикация')+'</h2>'+(published?'<p class="muted">Гости смогут загрузить селфи и увидеть найденные фотографии.</p><div class="share-link">'+esc(url)+'</div><div class="actions"><button id="copy">Скопировать</button><a class="button secondary" href="'+esc(url)+'" target="_blank" rel="noopener">Открыть</a><button class="secondary" id="rotate">Обновить ссылку</button><button class="danger" id="toggle">Поставить на паузу</button></div>':'<p class="muted">Опубликуйте, когда готова хотя бы одна фотография и очередь пуста.</p><button id="toggle" '+(e.pending||!e.ready?'disabled':'')+'>Опубликовать</button>')+'<p id="share-status" class="status" aria-live="polite"></p>';q('#toggle',box).onclick=()=>changeSharing(async()=>{const status=published?'paused':'published';await api('/api/events/'+id,{method:'PATCH',body:{status}});event={...event,status};return '';});q('#copy',box)?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(url);stat('share-status','Ссылка скопирована.','ok');}catch{stat('share-status','Скопируйте ссылку из поля выше.','error');}});q('#rotate',box)?.addEventListener('click',()=>changeSharing(async()=>{if(!await confirmAction('Старая ссылка для гостей перестанет работать. Продолжить?'))return null;event.guest=(await api('/api/events/'+id+'/rotate-link',{method:'POST'})).guest;return 'Ссылка обновлена.';}));}
 async function refresh(){clear();try{event=await api('/api/events/'+id);q('#event-title').textContent=event.title;q('#stats').innerHTML='<div class="stat"><strong>'+(event.total||0)+'</strong><span>фотографий</span></div><div class="stat"><strong>'+(event.ready||0)+'</strong><span>готово</span></div><div class="stat"><strong>'+(event.faces||0)+'</strong><span>лиц найдено</span></div><div class="stat"><strong>'+(event.no_faces??0)+'</strong><span>без лиц</span></div><div class="stat"><strong>'+(event.searches??0)+'</strong><span>поисков</span></div><div class="stat"><strong>'+(event.downloads??0)+'</strong><span>скачиваний</span></div>';const note=q('#gallery-status');note.innerHTML=event.pending?'Обрабатывается: '+event.pending:event.errors?'Ошибок: '+event.errors+' <button class="text-button" id="retry">Повторить</button>':event.total?'Галерея готова':'Загрузите первые фотографии';q('#retry')?.addEventListener('click',async()=>{try{await api('/api/events/'+id+'/retry',{method:'POST'});await refresh();}catch(x){stat('upload-status',x.message,'error');}});share(event);const sig=JSON.stringify((event.photos||[]).map(p=>[p.id,p.status,p.count,p.error]));if(sig!==last){last=sig;render(event.photos||[]);}if(event.pending)poll=setTimeout(refresh,1600);}catch(x){stat('upload-status',x.message,'error');}}await refresh();}
-async function guest(){clear();let event;try{event=await api('/api/events/'+eventId,{},true);}catch(x){return fail(x.message);}root.innerHTML='<section class="guest-layout"><div class="guest-head"><div class="eyebrow">Твое мероприятие</div><h1>'+esc(event.title)+'</h1>'+(event.description?'<p class="event-description">'+esc(event.description)+'</p>':'')+'</div><section class="search-panel"><details id="search-details" open><summary><span>Поиск по фотографии</span><span class="search-edit">Другое селфи</span></summary><div class="search-content"><div class="search-intro"><h2>Это ты.<br>Твои кадры.</h2><p>Добавь селфи — найди себя на фото с мероприятия.</p><p class="search-explanation">Одно лицо, хороший свет, без темных очков. Поиск только в этой съемке.</p></div><form id="search"><div class="drop selfie-drop"><label><span id="selfie-label">Добавить селфи</span><input id="selfie" type="file" accept="image/jpeg,image/png,image/webp" required></label><img id="preview" class="cover selfie-preview" hidden alt="Выбранное фото для поиска"></div><label class="check"><input type="checkbox" required><span>Я согласен на обработку этого фото для поиска фотографий в этой съёмке.</span></label><button class="full" id="find">Найти мои кадры</button><p id="search-status" class="status" aria-live="polite"></p></form></div></details></section><section id="results" tabindex="-1" aria-label="Результаты поиска"></section></section>';
+async function guest(){clear();let event;try{event=await api('/api/events/'+eventId,{},true);}catch(x){const access=guestAccessHint(x.status);return fail(access||'Не удалось загрузить галерею. Проверьте подключение и попробуйте ещё раз.',access?null:guest);}root.innerHTML='<section class="guest-layout"><div class="guest-head"><div class="eyebrow">Твое мероприятие</div><h1>'+esc(event.title)+'</h1>'+(event.description?'<p class="event-description">'+esc(event.description)+'</p>':'')+'</div><section class="search-panel"><details id="search-details" open><summary><span>Поиск по фотографии</span><span class="search-edit">Другое селфи</span></summary><div class="search-content"><div class="search-intro"><h2>Это ты.<br>Твои кадры.</h2><p>Добавь селфи — найди себя на фото с мероприятия.</p><p class="search-explanation">Одно лицо, хороший свет, без темных очков. Поиск только в этой съемке.</p></div><form id="search"><div class="drop selfie-drop"><label><span id="selfie-label">Добавить селфи</span><input id="selfie" type="file" accept="image/jpeg,image/png,image/webp" required></label><img id="preview" class="cover selfie-preview" hidden alt="Выбранное фото для поиска"></div><label class="check"><input type="checkbox" required><span>Я согласен на обработку этого фото для поиска фотографий в этой съёмке.</span></label><button class="full" id="find">Найти мои кадры</button><p id="search-status" class="status" aria-live="polite"></p></form></div></details></section><section id="results" tabindex="-1" aria-label="Результаты поиска"></section></section>';
 const find=q('#find'),refreshReady=document.createElement('button');
 refreshReady.id='refresh-ready';refreshReady.type='button';refreshReady.className='secondary full';refreshReady.textContent='Проверить готовность';q('#search-status').after(refreshReady);
 let checkingReadiness=false;
@@ -91,7 +101,7 @@ async function checkReadiness(){
   clear();checkingReadiness=true;refreshReady.disabled=true;find.disabled=true;
   stat('search-status','Проверяем готовность галереи…');
   try{readiness(await api('/api/events/'+eventId,{},true));}
-  catch(x){refreshReady.hidden=false;stat('search-status',x.message+' Нажмите «Проверить готовность», чтобы повторить.','error');}
+  catch(x){const access=guestAccessHint(x.status);refreshReady.hidden=!!access;stat('search-status',access||x.message+' Нажмите «Проверить готовность», чтобы повторить.','error');}
   finally{checkingReadiness=false;refreshReady.disabled=false;}
 }
 let searching=false;refreshReady.onclick=checkReadiness;readiness(event);
@@ -111,9 +121,9 @@ q('#search').onsubmit=async e=>{
     stat('search-status',photos.length?'Найдено: '+photos.length+'. Проверь, что на фото именно ты.':'Совпадений не нашлось. Попробуйте другое селфи: без других людей, с хорошо видимым лицом.');
     if(photos.length){results(result,photos);q('#search-details').open=false;q('#results').focus({preventScroll:true});}
   }catch(x){
-    unavailable=x.status===409||x.status===403;
-    if(unavailable)refreshReady.hidden=false;
-    stat('search-status',x.message,'error');
+    const access=guestAccessHint(x.status);unavailable=x.status===409||!!access;
+    if(unavailable)refreshReady.hidden=!!access;
+    stat('search-status',access||x.message,'error');
   }finally{
     searching=false;selfie.disabled=false;consent.disabled=false;refreshReady.disabled=false;find.textContent='Найти мои кадры';q('#search').removeAttribute('aria-busy');
     find.disabled=unavailable||event.status!=='published'||!!event.pending||!event.ready;
