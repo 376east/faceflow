@@ -176,6 +176,20 @@ class Flow(unittest.TestCase):
         self.assertEqual(self.search(eid,guest,self.alpha).json['count'],1)
         self.client.delete('/api/events/'+eid,headers=self.admin)
 
+    def test_settings_patch_preserves_unrelated_fields(self):
+        eid, _ = self.create('Original')
+        path = '/api/events/' + eid
+        self.upload(eid, jpg(self.alpha)); self.wait(eid)
+        self.assertEqual(self.client.patch(path, headers=self.admin, json={'title':'Updated', 'description':'Saved elsewhere'}).status_code, 200)
+        self.assertEqual(self.client.patch(path, headers=self.admin, json={'status':'paused'}).status_code, 200)
+        info = self.client.get(path, headers=self.admin).json
+        self.assertEqual((info['title'], info['description'], info['status']), ('Updated', 'Saved elsewhere', 'paused'))
+        description = 'a' * 2000
+        self.assertEqual(self.client.patch(path, headers=self.admin, json={'description': description}).status_code, 200)
+        self.assertEqual(self.client.get(path, headers=self.admin).json['status'], 'paused')
+        self.assertEqual(self.client.patch(path, headers=self.admin, json={'description': description + 'a'}).status_code, 400)
+        self.assertEqual(self.client.get(path, headers=self.admin).json['description'], description)
+
     def test_05_retry_and_reindex(self):
         eid,guest=self.create('Reindex')
         photo_id=self.upload(eid,jpg(self.alpha)).json['id'];self.wait(eid)

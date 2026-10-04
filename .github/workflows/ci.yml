@@ -41,8 +41,8 @@ jobs:
           node --check web/app.js
       - name: Download and verify pinned models
         run: python scripts/download_models.py
-      - name: Client upload recovery tests
-        run: node --test tests/test_upload.cjs
+      - name: Client control-flow tests
+        run: node --test tests/test_upload.cjs tests/test_settings.cjs
       - name: Integration tests with branch coverage
         run: python -m coverage run -m unittest discover -s tests -v
       - name: Coverage report
