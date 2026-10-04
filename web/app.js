@@ -2,7 +2,7 @@
 const root=document.querySelector('#app'),viewer=document.querySelector('#viewer'),frag=new URLSearchParams(location.hash.slice(1));
 if(frag.get('admin')){sessionStorage.setItem('faceflow-admin',frag.get('admin'));history.replaceState(null,'',location.pathname);}
 const adminKey=sessionStorage.getItem('faceflow-admin'),eventId=location.pathname.match(/^\/e\/([^/]+)/)?.[1],guestKey=frag.get('g');
-let poll,previewUrl,ticket,modalPhoto,feedbackHandler,viewerItems=[],viewerIndex=0;
+let poll,previewUrl,ticket,modalPhoto,feedbackHandler,viewerItems=[],viewerIndex=0,uploadInProgress=false;
 document.body.dataset.mode=eventId?'guest':'photographer';
 if(eventId)document.querySelector('.brand').href=location.href;
 const q=(s,n=document)=>n.querySelector(s),qa=(s,n=document)=>[...n.querySelectorAll(s)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,7 +11,7 @@ async function confirmAction(message){
   return await new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));
 }
 const stat=(id,msg,type='')=>{const el=q('#'+id);if(el){el.textContent=msg;el.className='status '+type;}};
-async function api(path,opt={},guest=false){const headers={...(opt.headers||{}),[guest?'X-Guest-Key':'X-Admin-Key']:guest?guestKey||'':adminKey||''};if(opt.body&&!(opt.body instanceof FormData)){headers['Content-Type']='application/json';opt.body=JSON.stringify(opt.body);}const res=await fetch(path,{...opt,headers});let data={};try{data=await res.json();}catch{}if(!res.ok)throw Error(data.error||'Не удалось выполнить действие.');return data;}
+async function api(path,opt={},guest=false){const headers={...(opt.headers||{}),[guest?'X-Guest-Key':'X-Admin-Key']:guest?guestKey||'':adminKey||''};if(opt.body&&!(opt.body instanceof FormData)){headers['Content-Type']='application/json';opt.body=JSON.stringify(opt.body);}const res=await fetch(path,{...opt,headers});let data={};try{data=await res.json();}catch{}if(!res.ok){const error=Error(data.error||'Не удалось выполнить действие.');error.status=res.status;throw error;}return data;}
 function clear(){clearTimeout(poll);}function fail(m){clear();root.innerHTML='<section class="panel"><h1>Страница не открылась</h1><p>'+esc(m)+'</p></section>';}
 function badge(s){return '<span class="badge '+esc(s||'draft')+'">'+({published:'Опубликована',paused:'На паузе',draft:'Черновик'})[s||'draft']+'</span>';}
 function guestLink(id,key){return location.origin+'/e/'+id+'#g='+key;}
@@ -43,7 +43,7 @@ q('#upload').onclick=async()=>{
   if(uploading)return;
   const files=[...input.files],errors=[],failed=[],button=q('#upload'),progress=q('#progress');
   if(!files.length)return;
-  let added=0,duplicates=0;uploading=true;input.disabled=true;button.disabled=true;drop.setAttribute('aria-busy','true');
+  let added=0,duplicates=0;uploading=true;uploadInProgress=true;q('#back').disabled=true;q('#delete-event').disabled=true;input.disabled=true;button.disabled=true;drop.setAttribute('aria-busy','true');
   progress.hidden=false;progress.value=0;progress.max=files.length;q('#upload-errors').hidden=true;
   try{
     for(let i=0;i<files.length;i++){
@@ -53,7 +53,7 @@ q('#upload').onclick=async()=>{
       progress.value=i+1;
     }
   }finally{
-    uploading=false;input.disabled=false;drop.removeAttribute('aria-busy');setFiles(failed);
+    uploading=false;uploadInProgress=false;q('#back').disabled=false;q('#delete-event').disabled=false;input.disabled=false;drop.removeAttribute('aria-busy');setFiles(failed);
     button.textContent=failed.length?'Повторить неудачные ('+failed.length+')':'Загрузить';
     q('#upload-errors').hidden=!errors.length;q('#upload-errors').innerHTML=errors.map(x=>'<li>'+esc(x)+'</li>').join('');
     stat('upload-status','Добавлено: '+added+'. Уже в галерее: '+duplicates+'.'+(failed.length?' Не загружено: '+failed.length+'. Можно повторить без выбора файлов.':added?' Началась обработка.':''),failed.length?'error':'ok');
@@ -78,16 +78,39 @@ function readiness(d){
   find.disabled=false;refreshReady.hidden=true;stat('search-status',d.ready+' фото в этой съемке','ok');
 }
 async function checkReadiness(){
-  if(checkingReadiness)return;
+  if(checkingReadiness||searching)return;
   clear();checkingReadiness=true;refreshReady.disabled=true;find.disabled=true;
   stat('search-status','Проверяем готовность галереи…');
   try{readiness(await api('/api/events/'+eventId,{},true));}
   catch(x){refreshReady.hidden=false;stat('search-status',x.message+' Нажмите «Проверить готовность», чтобы повторить.','error');}
   finally{checkingReadiness=false;refreshReady.disabled=false;}
 }
-refreshReady.onclick=checkReadiness;readiness(event);
-q('#selfie').onchange=e=>{const file=e.target.files[0];if(previewUrl)URL.revokeObjectURL(previewUrl);if(file){previewUrl=URL.createObjectURL(file);q('#preview').src=previewUrl;q('#preview').hidden=false;q('#selfie-label').textContent='Выбрать другое фото';q('.selfie-drop').classList.add('has-selfie');}else{q('#preview').hidden=true;q('#selfie-label').textContent='Добавить селфи';q('.selfie-drop').classList.remove('has-selfie');}q('#results').innerHTML='';ticket=null;feedbackHandler=null;readiness(event);};
-q('#search').onsubmit=async e=>{e.preventDefault();const file=q('#selfie').files[0];if(!file)return;find.disabled=true;ticket=null;feedbackHandler=null;q('#results').innerHTML='';stat('search-status','Ищем фотографии…');find.textContent='Ищем фотографии…';q('#search').setAttribute('aria-busy','true');try{const form=new FormData();form.append('selfie',file);form.append('consent','yes');const result=await api('/api/events/'+eventId+'/search',{method:'POST',body:form},true),photos=result.photos||[];ticket=result.ticket||null;stat('search-status',photos.length?'Найдено: '+photos.length+'. Проверь, что на фото именно ты.':'Совпадений не нашлось. Попробуйте другое селфи: без других людей, с хорошо видимым лицом.');if(photos.length){results(result,photos);q('#search-details').open=false;q('#results').focus({preventScroll:true});}}catch(x){stat('search-status',x.message,'error');}finally{find.textContent='Найти мои кадры';q('#search').removeAttribute('aria-busy');if(event.status==='published'&&!event.pending)find.disabled=false;}};}
+let searching=false;refreshReady.onclick=checkReadiness;readiness(event);
+q('#selfie').onchange=e=>{if(searching)return;const file=e.target.files[0];if(previewUrl)URL.revokeObjectURL(previewUrl);if(file){previewUrl=URL.createObjectURL(file);q('#preview').src=previewUrl;q('#preview').hidden=false;q('#selfie-label').textContent='Выбрать другое фото';q('.selfie-drop').classList.add('has-selfie');}else{q('#preview').hidden=true;q('#selfie-label').textContent='Добавить селфи';q('.selfie-drop').classList.remove('has-selfie');}q('#results').innerHTML='';ticket=null;feedbackHandler=null;readiness(event);};
+q('#search').onsubmit=async e=>{
+  e.preventDefault();if(searching||checkingReadiness)return;
+  const selfie=q('#selfie'),consent=q('#search input[type="checkbox"]'),file=selfie.files[0];
+  if(!file||find.disabled)return;
+  searching=true;selfie.disabled=true;consent.disabled=true;find.disabled=true;refreshReady.disabled=true;
+  ticket=null;feedbackHandler=null;q('#results').innerHTML='';
+  stat('search-status','Ищем фотографии…');find.textContent='Ищем фотографии…';q('#search').setAttribute('aria-busy','true');
+  let unavailable=false;
+  try{
+    const form=new FormData();form.append('selfie',file);form.append('consent','yes');
+    const result=await api('/api/events/'+eventId+'/search',{method:'POST',body:form},true),photos=result.photos||[];
+    ticket=result.ticket||null;
+    stat('search-status',photos.length?'Найдено: '+photos.length+'. Проверь, что на фото именно ты.':'Совпадений не нашлось. Попробуйте другое селфи: без других людей, с хорошо видимым лицом.');
+    if(photos.length){results(result,photos);q('#search-details').open=false;q('#results').focus({preventScroll:true});}
+  }catch(x){
+    unavailable=x.status===409||x.status===403;
+    if(unavailable)refreshReady.hidden=false;
+    stat('search-status',x.message,'error');
+  }finally{
+    searching=false;selfie.disabled=false;consent.disabled=false;refreshReady.disabled=false;find.textContent='Найти мои кадры';q('#search').removeAttribute('aria-busy');
+    find.disabled=unavailable||event.status!=='published'||!!event.pending||!event.ready;
+  }
+};}
+
 function results(result,photos){
   const box=q('#results'),zipUrl=ids=>result.zip+'&ids='+encodeURIComponent(ids.join(',')),rejected=new Set();
   box.innerHTML='<div class="section-head result-bar"><div><h2>Твои кадры <span class="result-count">'+photos.length+'</span></h2><div class="selection-tools"><span class="select-line" id="selected-count" aria-live="polite">Отметь любимые или скачай все.</span><button class="text-button" id="select-all" type="button">Выбрать все</button></div></div><a id="zip" class="button" download>Скачать все</a></div><div class="gallery" id="result-gallery">'+photos.map(p=>photo(p,false,true)).join('')+'</div>';
@@ -111,4 +134,4 @@ function results(result,photos){
   q('#not-me').onclick=async()=>{if(!modalPhoto||!feedbackHandler)return;try{await feedbackHandler(modalPhoto);refreshViewer();}catch(x){stat('viewer-status',x.message,'error');}};
   qa('.photo',gallery).forEach((card,i)=>{const name='Кадр '+String(i+1).padStart(2,'0');q('.photo-name',card).textContent=name;q('.photo-name',card).title=name;q('img',card).alt=name;q('.photo-open',card).setAttribute('aria-label','Открыть '+name);q('[data-select]',card).setAttribute('aria-label','Выбрать '+name);});wireModal(gallery);update();
 }
-q('#close-viewer').onclick=()=>viewer.close();q('#not-me').onclick=async()=>{if(!modalPhoto||!ticket)return;try{await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket,photo_id:modalPhoto,kind:'not_me'}},true);q('#not-me').textContent='Отмечено';}catch(x){alert(x.message);}};window.onbeforeunload=()=>{clear();if(previewUrl)URL.revokeObjectURL(previewUrl);};eventId?guest():home();
+q('#close-viewer').onclick=()=>viewer.close();q('#not-me').onclick=async()=>{if(!modalPhoto||!ticket)return;try{await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket,photo_id:modalPhoto,kind:'not_me'}},true);q('#not-me').textContent='Отмечено';}catch(x){alert(x.message);}};window.onbeforeunload=e=>{if(uploadInProgress){e.preventDefault();e.returnValue='';return;}clear();if(previewUrl)URL.revokeObjectURL(previewUrl);};q('.brand').addEventListener('click',e=>{if(uploadInProgress){e.preventDefault();stat('upload-status','Дождитесь завершения загрузки перед переходом.');}});eventId?guest():home();

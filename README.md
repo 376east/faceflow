@@ -83,7 +83,7 @@ YuNet и SFace - нейросетевые модели, работающие л�
 
 ```powershell
 python -m unittest discover -s tests -v
-node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs
+node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs tests/test_search.cjs
 ```
 
 [CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. В артефакте `coverage-report` каждого прогона доступны HTML и JSON покрытия строк и ветвей `app.py` и `recognition.py`; это покрытие кода, не точность распознавания. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).

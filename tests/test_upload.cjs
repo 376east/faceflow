@@ -37,9 +37,13 @@ test('active upload ignores drops and duplicate clicks; a new selection clears o
   const original={name:'original'};ui.choose([original]);
   const pending=ui.q('#upload').onclick();
   assert.equal(ui.q('#photos').disabled,true);
+  assert.equal(ui.q('#back').disabled,true);
+  assert.equal(ui.q('#delete-event').disabled,true);
   ui.q('#drop').handlers.drop({preventDefault(){},dataTransfer:{files:[{name:'replacement'}]}});
   await ui.q('#upload').onclick();assert.equal(calls,1);
   release();await pending;
+  assert.equal(ui.q('#back').disabled,false);
+  assert.equal(ui.q('#delete-event').disabled,false);
   assert.deepEqual(ui.q('#photos').files,[original]);
   assert.match(ui.q('#upload-errors').innerHTML,/&lt;broken>/);
   ui.choose([{name:'replacement'}]);
