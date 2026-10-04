@@ -42,7 +42,7 @@ jobs:
       - name: Download and verify pinned models
         run: python scripts/download_models.py
       - name: Client control-flow tests
-        run: node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs tests/test_search.cjs
+        run: node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs tests/test_search.cjs tests/test_expiry.cjs
       - name: Integration tests with branch coverage
         run: python -m coverage run -m unittest discover -s tests -v
       - name: Coverage report

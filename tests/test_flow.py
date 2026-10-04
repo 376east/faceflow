@@ -190,6 +190,20 @@ class Flow(unittest.TestCase):
         self.assertEqual(self.client.patch(path, headers=self.admin, json={'description': description + 'a'}).status_code, 400)
         self.assertEqual(self.client.get(path, headers=self.admin).json['description'], description)
 
+    def test_expired_ticket_requires_fresh_search(self):
+        eid, guest = self.create('Expiry')
+        photo_id = self.upload(eid, jpg(self.alpha)).json['id']; self.wait(eid)
+        # Real signing/verification, only the creation timestamp is moved back.
+        with patch('itsdangerous.timed.TimestampSigner.get_timestamp', return_value=int(time.time()) - 1201):
+            expired = module.make_ticket(eid, [photo_id])
+        self.assertEqual(self.client.get(f'/media/{eid}/{photo_id}?ticket={expired}').status_code, 403)
+        self.assertEqual(self.client.get(f'/api/events/{eid}/download?ticket={expired}').status_code, 403)
+        self.assertEqual(self.client.post(f'/api/events/{eid}/feedback', headers=guest, json={'ticket':expired, 'photo_id':photo_id, 'kind':'not_me'}).status_code, 403)
+        fresh = self.search(eid, guest, self.alpha)
+        self.assertEqual(fresh.status_code, 200)
+        self.assertEqual(fresh.json['expires_in'], 1200)
+        self.assertEqual(self.client.get(fresh.json['zip']).status_code, 200)
+
     def test_05_retry_and_reindex(self):
         eid,guest=self.create('Reindex')
         photo_id=self.upload(eid,jpg(self.alpha)).json['id'];self.wait(eid)

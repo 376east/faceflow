@@ -2,7 +2,7 @@
 const root=document.querySelector('#app'),viewer=document.querySelector('#viewer'),frag=new URLSearchParams(location.hash.slice(1));
 if(frag.get('admin')){sessionStorage.setItem('faceflow-admin',frag.get('admin'));history.replaceState(null,'',location.pathname);}
 const adminKey=sessionStorage.getItem('faceflow-admin'),eventId=location.pathname.match(/^\/e\/([^/]+)/)?.[1],guestKey=frag.get('g');
-let poll,previewUrl,ticket,modalPhoto,feedbackHandler,viewerItems=[],viewerIndex=0,uploadInProgress=false;
+let poll,previewUrl,ticket,modalPhoto,feedbackHandler,viewerItems=[],viewerIndex=0,uploadInProgress=false,resultTimer;
 document.body.dataset.mode=eventId?'guest':'photographer';
 if(eventId)document.querySelector('.brand').href=location.href;
 const q=(s,n=document)=>n.querySelector(s),qa=(s,n=document)=>[...n.querySelectorAll(s)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -86,13 +86,13 @@ async function checkReadiness(){
   finally{checkingReadiness=false;refreshReady.disabled=false;}
 }
 let searching=false;refreshReady.onclick=checkReadiness;readiness(event);
-q('#selfie').onchange=e=>{if(searching)return;const file=e.target.files[0];if(previewUrl)URL.revokeObjectURL(previewUrl);if(file){previewUrl=URL.createObjectURL(file);q('#preview').src=previewUrl;q('#preview').hidden=false;q('#selfie-label').textContent='Выбрать другое фото';q('.selfie-drop').classList.add('has-selfie');}else{q('#preview').hidden=true;q('#selfie-label').textContent='Добавить селфи';q('.selfie-drop').classList.remove('has-selfie');}q('#results').innerHTML='';ticket=null;feedbackHandler=null;readiness(event);};
+q('#selfie').onchange=e=>{if(searching)return;const file=e.target.files[0];if(previewUrl)URL.revokeObjectURL(previewUrl);if(file){previewUrl=URL.createObjectURL(file);q('#preview').src=previewUrl;q('#preview').hidden=false;q('#selfie-label').textContent='Выбрать другое фото';q('.selfie-drop').classList.add('has-selfie');}else{q('#preview').hidden=true;q('#selfie-label').textContent='Добавить селфи';q('.selfie-drop').classList.remove('has-selfie');}clearTimeout(resultTimer);q('#results').innerHTML='';ticket=null;feedbackHandler=null;readiness(event);};
 q('#search').onsubmit=async e=>{
   e.preventDefault();if(searching||checkingReadiness)return;
   const selfie=q('#selfie'),consent=q('#search input[type="checkbox"]'),file=selfie.files[0];
   if(!file||find.disabled)return;
   searching=true;selfie.disabled=true;consent.disabled=true;find.disabled=true;refreshReady.disabled=true;
-  ticket=null;feedbackHandler=null;q('#results').innerHTML='';
+  clearTimeout(resultTimer);ticket=null;feedbackHandler=null;q('#results').innerHTML='';
   stat('search-status','Ищем фотографии…');find.textContent='Ищем фотографии…';q('#search').setAttribute('aria-busy','true');
   let unavailable=false;
   try{
@@ -114,7 +114,31 @@ q('#search').onsubmit=async e=>{
 function results(result,photos){
   const box=q('#results'),zipUrl=ids=>result.zip+'&ids='+encodeURIComponent(ids.join(',')),rejected=new Set();
   box.innerHTML='<div class="section-head result-bar"><div><h2>Твои кадры <span class="result-count">'+photos.length+'</span></h2><div class="selection-tools"><span class="select-line" id="selected-count" aria-live="polite">Отметь любимые или скачай все.</span><button class="text-button" id="select-all" type="button">Выбрать все</button></div></div><a id="zip" class="button" download>Скачать все</a></div><div class="gallery" id="result-gallery">'+photos.map(p=>photo(p,false,true)).join('')+'</div>';
-  const gallery=q('#result-gallery'),update=()=>{
+  const gallery=q('#result-gallery'),deadline=Date.now()+(result.expires_in||1200)*1000,isCurrent=()=>q('#result-gallery')===gallery;
+  const expiry=document.createElement('div');expiry.className='result-expiry';
+  expiry.innerHTML='<p id="result-expiry-status" class="status" aria-live="polite"></p><button id="renew-results" type="button" class="secondary">Обновить подборку</button>';
+  gallery.before(expiry);
+  stat('result-expiry-status','Ссылки на скачивание действуют до '+new Date(deadline).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'.');
+  q('#renew-results').onclick=()=>{q('#search-details').open=true;q('#search').requestSubmit();};
+  let expired=false;
+  const expireIfNeeded=()=>{
+    if(!isCurrent())return true;
+    if(Date.now()<deadline)return false;
+    if(!expired){
+      expired=true;ticket=null;feedbackHandler=null;
+      q('#zip').hidden=true;q('#zip').removeAttribute('href');q('#select-all').hidden=true;
+      qa('.photo-open, [data-select], [data-feedback]',gallery).forEach(el=>el.disabled=true);
+      q('#large-download').removeAttribute('href');if(viewer.open)viewer.close();
+      stat('result-expiry-status','Срок ссылок истёк. Обновите подборку - селфи уже выбрано.','error');
+    }
+    return true;
+  };
+  clearTimeout(resultTimer);resultTimer=setTimeout(expireIfNeeded,Math.max(0,deadline-Date.now()));
+  gallery.addEventListener('click',e=>{if(expireIfNeeded()){e.preventDefault();e.stopImmediatePropagation();}},true);
+  q('#zip').onclick=e=>{if(expireIfNeeded())e.preventDefault();};
+  q('#large-download').onclick=e=>{if(expireIfNeeded())e.preventDefault();};
+  const update=()=>{
+    if(expireIfNeeded())return;
     const available=photos.filter(p=>!rejected.has(p.id)).map(p=>p.id),ids=qa('[data-select]:checked',gallery).map(x=>x.dataset.select).filter(id=>!rejected.has(id));
     q('#selected-count').textContent=available.length?(ids.length?'Выбрано: '+ids.length+'.':'Отметь любимые или скачай все.'):'Все кадры отмечены как чужие. Попробуйте другое селфи.';
     q('#zip').hidden=!available.length;q('#zip').href=zipUrl(ids.length?ids:available);
@@ -122,16 +146,17 @@ function results(result,photos){
     q('#select-all').hidden=!available.length;q('#select-all').textContent=ids.length===available.length?'Снять выбор':'Выбрать все';
   };
   feedbackHandler=async id=>{
-    if(rejected.has(id))return;
+    if(expireIfNeeded()||rejected.has(id))return;
     await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket:result.ticket,photo_id:id,kind:'not_me'}},true);
+    if(!isCurrent())return;
     rejected.add(id);
     const card=qa('[data-photo]',gallery).find(p=>p.dataset.photo===id),check=q('[data-select]',card),button=q('[data-feedback]',card);
     check.checked=false;check.disabled=true;button.textContent='Отмечено';button.disabled=true;update();
   };
   qa('[data-select]',gallery).forEach(x=>x.onchange=update);
   q('#select-all').onclick=()=>{const checks=qa('[data-select]',gallery).filter(x=>!x.disabled),all=checks.every(x=>x.checked);checks.forEach(x=>x.checked=!all);update();};
-  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){b.disabled=false;stat('search-status',x.message,'error');}});
-  q('#not-me').onclick=async()=>{if(!modalPhoto||!feedbackHandler)return;try{await feedbackHandler(modalPhoto);refreshViewer();}catch(x){stat('viewer-status',x.message,'error');}};
+  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){b.disabled=false;if(isCurrent())stat('search-status',x.message,'error');}});
+  q('#not-me').onclick=async()=>{if(expireIfNeeded()||!modalPhoto||!feedbackHandler)return;try{await feedbackHandler(modalPhoto);if(isCurrent())refreshViewer();}catch(x){if(isCurrent())stat('viewer-status',x.message,'error');}};
   qa('.photo',gallery).forEach((card,i)=>{const name='Кадр '+String(i+1).padStart(2,'0');q('.photo-name',card).textContent=name;q('.photo-name',card).title=name;q('img',card).alt=name;q('.photo-open',card).setAttribute('aria-label','Открыть '+name);q('[data-select]',card).setAttribute('aria-label','Выбрать '+name);});wireModal(gallery);update();
 }
-q('#close-viewer').onclick=()=>viewer.close();q('#not-me').onclick=async()=>{if(!modalPhoto||!ticket)return;try{await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket,photo_id:modalPhoto,kind:'not_me'}},true);q('#not-me').textContent='Отмечено';}catch(x){alert(x.message);}};window.onbeforeunload=e=>{if(uploadInProgress){e.preventDefault();e.returnValue='';return;}clear();if(previewUrl)URL.revokeObjectURL(previewUrl);};q('.brand').addEventListener('click',e=>{if(uploadInProgress){e.preventDefault();stat('upload-status','Дождитесь завершения загрузки перед переходом.');}});eventId?guest():home();
+q('#close-viewer').onclick=()=>viewer.close();q('#not-me').onclick=async()=>{if(!modalPhoto||!ticket)return;try{await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket,photo_id:modalPhoto,kind:'not_me'}},true);q('#not-me').textContent='Отмечено';}catch(x){alert(x.message);}};window.onbeforeunload=e=>{if(uploadInProgress){e.preventDefault();e.returnValue='';return;}clear();clearTimeout(resultTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);};q('.brand').addEventListener('click',e=>{if(uploadInProgress){e.preventDefault();stat('upload-status','Дождитесь завершения загрузки перед переходом.');}});eventId?guest():home();

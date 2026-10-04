@@ -9,7 +9,7 @@ function setup(api){
   const nodes=new Map();
   const q=id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,hidden:true,files:[{name:'selfie'}],setAttribute(){},removeAttribute(){},focus(){}});return nodes.get(id);};
   const shown=[];
-  const context=vm.createContext({q,api,find:q('#find'),refreshReady:q('#refresh-ready'),searching:false,checkingReadiness:false,event:{status:'published',pending:0,ready:1},eventId:'event',ticket:null,feedbackHandler:null,FormData:class{append(){}},stat:(id,msg)=>q('#'+id).textContent=msg,results:(result,photos)=>shown.push(photos)});
+  const context=vm.createContext({q,api,find:q('#find'),refreshReady:q('#refresh-ready'),searching:false,checkingReadiness:false,event:{status:'published',pending:0,ready:1},eventId:'event',ticket:null,feedbackHandler:null,resultTimer:null,clearTimeout(){},FormData:class{append(){}},stat:(id,msg)=>q('#'+id).textContent=msg,results:(result,photos)=>shown.push(photos)});
   vm.runInContext(handler,context);
   return {q,shown,submit:()=>q('#search').onsubmit({preventDefault(){}})};
 }
