@@ -190,6 +190,17 @@ class Flow(unittest.TestCase):
         self.assertEqual(self.client.patch(path, headers=self.admin, json={'description': description + 'a'}).status_code, 400)
         self.assertEqual(self.client.get(path, headers=self.admin).json['description'], description)
 
+    def test_invalid_status_patch_is_input_error_and_preserves_event(self):
+        eid, _ = self.create('Unchanged')
+        path = '/api/events/' + eid
+        for status in ([], {}, None, True, 1, 'unknown'):
+            with self.subTest(status=status):
+                response = self.client.patch(path, headers=self.admin, json={'status':status, 'title':'Must not apply'})
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('error', response.json)
+                info = self.client.get(path, headers=self.admin).json
+                self.assertEqual((info['title'], info['status']), ('Unchanged', 'draft'))
+
     def test_expired_ticket_requires_fresh_search(self):
         eid, guest = self.create('Expiry')
         photo_id = self.upload(eid, jpg(self.alpha)).json['id']; self.wait(eid)

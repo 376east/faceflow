@@ -345,7 +345,7 @@ def update_event(event_id):
                 return jsonify(error='Проверьте название и описание съёмки.'),400
             fields[key]=value.strip()
     if 'status' in body:
-        if body['status'] not in {'draft','published','paused'}:abort(400)
+        if not isinstance(body['status'],str) or body['status'] not in {'draft','published','paused'}:abort(400)
         fields['status']=body['status']
     if 'detailed' in body:
         if not isinstance(body['detailed'],bool):abort(400)
