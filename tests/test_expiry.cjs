@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const source=require('node:fs').readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');
 const code=source.slice(source.indexOf('function results('),source.indexOf("q('#close-viewer').onclick="));
 function setup(apiResponse){
-  let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0;
+  let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0,refreshed=0;
   const timers=new Map(),nodes=new Map();
   const node=()=>({disabled:false,hidden:false,checked:false,dataset:{},handlers:{},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},before(){},addEventListener(name,fn){this.handlers[name]=fn;}});
   const q=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
@@ -16,10 +16,10 @@ function setup(apiResponse){
   const qa=selector=>selector==='.photo'||selector==='[data-photo]'?[card]:selector==='[data-select]:checked'?(check.checked?[check]:[]):selector==='[data-select]'?[check]:selector==='[data-feedback]'?[feedback]:selector==='.photo-open, [data-select], [data-feedback]'?[open,check,feedback]:[];
   class Clock extends Date{static now(){return clock;}}
   q('#search').requestSubmit=()=>submitted++;
-  const context=vm.createContext({q,qa,Date:Clock,document:{createElement:node},photo:()=>'',wireModal(){},eventId:'event',modalPhoto:'one',ticket:'test',feedbackHandler:null,resultTimer:null,viewer:{open:true,close(){closed++;}},api:async()=>{apiCalls++;if(apiResponse)await apiResponse();},refreshViewer(){},stat:(id,msg)=>q('#'+id).textContent=msg,setTimeout:fn=>{const id=++counter;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
+  const context=vm.createContext({q,qa,Date:Clock,document:{createElement:node},photo:()=>'',wireModal(){},eventId:'event',modalPhoto:'one',ticket:'test',feedbackHandler:null,resultTimer:null,viewer:{open:true,close(){closed++;this.open=false;}},api:async()=>{apiCalls++;if(apiResponse)await apiResponse();},refreshViewer(){refreshed++;},stat:(id,msg)=>q('#'+id).textContent=msg,setTimeout:fn=>{const id=++counter;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
   vm.runInContext(code,context);
   const show=()=>{nodes.set('#result-gallery',node());context.ticket='fresh';context.results({zip:'/zip?ticket=test',ticket:'test',expires_in:20},[{id:'one'}]);};
-  return {q,show,timers,ticket:()=>context.ticket,closed:()=>closed,submitted:()=>submitted,apiCalls:()=>apiCalls,advance:ms=>clock+=ms};
+  return {q,show,timers,view:id=>{context.modalPhoto=id;context.viewer.open=true;},close:()=>context.viewer.open=false,refreshed:()=>refreshed,ticket:()=>context.ticket,closed:()=>closed,submitted:()=>submitted,apiCalls:()=>apiCalls,advance:ms=>clock+=ms};
 }
 test('expiry hides ZIP, disables old result actions and closes viewer; renewal submits existing form',()=>{
   const ui=setup();ui.show();assert.equal(ui.q('#zip').hidden,false);
@@ -53,4 +53,95 @@ test('old feedback completing after a new search cannot expire the new result',a
   assert.equal(ui.ticket(),'fresh');
   assert.equal(ui.q('#zip').hidden,false);
   assert.doesNotMatch(ui.q('#result-expiry-status').textContent,/истёк/);
+});
+test('feedback failure after expiry keeps the expired result disabled',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.advance(20001);[...ui.timers.values()][0]();
+  reject(new Error('Delayed failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#zip').hidden,true);
+  assert.match(ui.q('#result-expiry-status').textContent,/истёк/);
+  assert.notEqual(ui.q('#search-status').textContent,'Delayed failure');
+});
+test('feedback failure detects expiry even before its timer runs',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.advance(20001);
+  reject(new Error('Delayed failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#zip').hidden,true);
+  assert.match(ui.q('#result-expiry-status').textContent,/истёк/);
+});
+test('feedback failure before expiry allows retry and shows the error',async()=>{
+  const ui=setup(async()=>{throw new Error('Try again');});ui.show();
+  await ui.q('[data-feedback]').onclick();
+  assert.equal(ui.q('[data-feedback]').disabled,false);
+  assert.equal(ui.q('#zip').hidden,false);
+  assert.equal(ui.q('#search-status').textContent,'Try again');
+});
+test('old feedback failure cannot change a replacement result',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.show();ui.q('[data-feedback]').disabled=true;
+  ui.q('#search-status').textContent='New result';
+  reject(new Error('Old failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#search-status').textContent,'New result');
+  assert.equal(ui.q('#zip').hidden,false);
+});
+
+test('viewer feedback failure does not appear on another photo',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('#not-me').onclick();
+  ui.view('two');ui.q('#viewer-status').textContent='Second photo';
+  reject(new Error('First photo failure'));await pending;
+  assert.equal(ui.q('#viewer-status').textContent,'Second photo');
+});
+
+test('viewer feedback failure does not change a closed viewer',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('#not-me').onclick();ui.close();
+  ui.q('#viewer-status').textContent='Closed';
+  reject(new Error('Delayed failure'));await pending;
+  assert.equal(ui.q('#viewer-status').textContent,'Closed');
+});
+
+test('viewer feedback failure checks expiry without waiting for the timer',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('#not-me').onclick();ui.advance(20001);
+  reject(new Error('Expired failure'));await pending;
+  assert.equal(ui.q('#zip').hidden,true);
+  assert.equal(ui.closed(),1);
+  assert.notEqual(ui.q('#viewer-status').textContent,'Expired failure');
+});
+
+test('viewer feedback failure on the active photo still shows a retryable error',async()=>{
+  const ui=setup(async()=>{throw new Error('Try again');});ui.show();
+  await ui.q('#not-me').onclick();
+  assert.equal(ui.q('#viewer-status').textContent,'Try again');
+  assert.equal(ui.q('#not-me').disabled,false);
+  assert.equal(ui.q('#zip').hidden,false);
+});
+
+test('viewer feedback success updates its card without refreshing another photo',async()=>{
+  let resolve;
+  const ui=setup(()=>new Promise(r=>resolve=r));ui.show();
+  const pending=ui.q('#not-me').onclick();ui.view('two');
+  resolve();await pending;
+  assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
+  assert.equal(ui.q('[data-select]').disabled,true);
+  assert.equal(ui.refreshed(),0);
+});
+
+test('viewer feedback success refreshes the active original photo',async()=>{
+  const ui=setup();ui.show();await ui.q('#not-me').onclick();
+  assert.equal(ui.refreshed(),1);
+  assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
 });
