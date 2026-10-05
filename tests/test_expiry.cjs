@@ -54,3 +54,42 @@ test('old feedback completing after a new search cannot expire the new result',a
   assert.equal(ui.q('#zip').hidden,false);
   assert.doesNotMatch(ui.q('#result-expiry-status').textContent,/истёк/);
 });
+test('feedback failure after expiry keeps the expired result disabled',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.advance(20001);[...ui.timers.values()][0]();
+  reject(new Error('Delayed failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#zip').hidden,true);
+  assert.match(ui.q('#result-expiry-status').textContent,/истёк/);
+  assert.notEqual(ui.q('#search-status').textContent,'Delayed failure');
+});
+test('feedback failure detects expiry even before its timer runs',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.advance(20001);
+  reject(new Error('Delayed failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#zip').hidden,true);
+  assert.match(ui.q('#result-expiry-status').textContent,/истёк/);
+});
+test('feedback failure before expiry allows retry and shows the error',async()=>{
+  const ui=setup(async()=>{throw new Error('Try again');});ui.show();
+  await ui.q('[data-feedback]').onclick();
+  assert.equal(ui.q('[data-feedback]').disabled,false);
+  assert.equal(ui.q('#zip').hidden,false);
+  assert.equal(ui.q('#search-status').textContent,'Try again');
+});
+test('old feedback failure cannot change a replacement result',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  ui.show();ui.q('[data-feedback]').disabled=true;
+  ui.q('#search-status').textContent='New result';
+  reject(new Error('Old failure'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#search-status').textContent,'New result');
+  assert.equal(ui.q('#zip').hidden,false);
+});

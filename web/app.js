@@ -174,7 +174,7 @@ function results(result,photos){
   };
   qa('[data-select]',gallery).forEach(x=>x.onchange=update);
   q('#select-all').onclick=()=>{const checks=qa('[data-select]',gallery).filter(x=>!x.disabled),all=checks.every(x=>x.checked);checks.forEach(x=>x.checked=!all);update();};
-  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){b.disabled=false;if(isCurrent())stat('search-status',x.message,'error');}});
+  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){if(!expireIfNeeded()){b.disabled=false;stat('search-status',x.message,'error');}}});
   q('#not-me').onclick=async()=>{if(expireIfNeeded()||!modalPhoto||!feedbackHandler)return;try{await feedbackHandler(modalPhoto);if(isCurrent())refreshViewer();}catch(x){if(isCurrent())stat('viewer-status',x.message,'error');}};
   qa('.photo',gallery).forEach((card,i)=>{const name='Кадр '+String(i+1).padStart(2,'0');q('.photo-name',card).textContent=name;q('.photo-name',card).title=name;q('img',card).alt=name;q('.photo-open',card).setAttribute('aria-label','Открыть '+name);q('[data-select]',card).setAttribute('aria-label','Выбрать '+name);});wireModal(gallery);update();
 }
