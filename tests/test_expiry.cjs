@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const source=require('node:fs').readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');
 const code=source.slice(source.indexOf('function results('),source.indexOf("q('#close-viewer').onclick="));
+const viewerCode=source.slice(source.indexOf('function refreshViewer('),source.indexOf('function wireModal('));
 function setup(apiResponse){
   let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0,refreshed=0;
   const timers=new Map(),nodes=new Map();
@@ -17,7 +18,9 @@ function setup(apiResponse){
   class Clock extends Date{static now(){return clock;}}
   q('#search').requestSubmit=()=>submitted++;
   const context=vm.createContext({q,qa,Date:Clock,document:{createElement:node},photo:()=>'',wireModal(){},eventId:'event',modalPhoto:'one',ticket:'test',feedbackHandler:null,resultTimer:null,viewer:{open:true,close(){closed++;this.open=false;}},api:async()=>{apiCalls++;if(apiResponse)await apiResponse();},refreshViewer(){refreshed++;},stat:(id,msg)=>q('#'+id).textContent=msg,setTimeout:fn=>{const id=++counter;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
-  vm.runInContext(code,context);
+  context.viewerItems=[card];context.viewerIndex=0;
+  vm.runInContext(viewerCode+code,context);
+  const refresh=context.refreshViewer;context.refreshViewer=()=>{refreshed++;refresh();};
   const show=()=>{nodes.set('#result-gallery',node());context.ticket='fresh';context.results({zip:'/zip?ticket=test',ticket:'test',expires_in:20},[{id:'one'}]);};
   return {q,show,timers,view:id=>{context.modalPhoto=id;context.viewer.open=true;},close:()=>context.viewer.open=false,refreshed:()=>refreshed,ticket:()=>context.ticket,closed:()=>closed,submitted:()=>submitted,apiCalls:()=>apiCalls,advance:ms=>clock+=ms};
 }
@@ -133,15 +136,44 @@ test('viewer feedback failure on the active photo still shows a retryable error'
 test('viewer feedback success updates its card without refreshing another photo',async()=>{
   let resolve;
   const ui=setup(()=>new Promise(r=>resolve=r));ui.show();
-  const pending=ui.q('#not-me').onclick();ui.view('two');
+  const pending=ui.q('#not-me').onclick(),before=ui.refreshed();ui.view('two');
   resolve();await pending;
   assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
   assert.equal(ui.q('[data-select]').disabled,true);
-  assert.equal(ui.refreshed(),0);
+  assert.equal(ui.refreshed(),before);
 });
 
 test('viewer feedback success refreshes the active original photo',async()=>{
   const ui=setup();ui.show();await ui.q('#not-me').onclick();
-  assert.equal(ui.refreshed(),1);
+  assert.ok(ui.refreshed()>0);
   assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
+});
+
+test('card and viewer share one pending feedback request and recover after failure',async()=>{
+  let reject;
+  const ui=setup(()=>new Promise((_,r)=>reject=r));ui.show();
+  const pending=ui.q('[data-feedback]').onclick();
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#not-me').disabled,true);
+  assert.equal(ui.q('#not-me').textContent,'Отмечаем…');
+  await ui.q('#not-me').onclick();
+  await ui.q('[data-feedback]').onclick();
+  assert.equal(ui.apiCalls(),1);
+  reject(new Error('Try again'));await pending;
+  assert.equal(ui.q('[data-feedback]').disabled,false);
+  assert.equal(ui.q('#not-me').disabled,false);
+  assert.equal(ui.q('#not-me').textContent,'Это не я');
+});
+
+test('viewer pending feedback blocks the card too; success leaves both marked',async()=>{
+  let resolve;
+  const ui=setup(()=>new Promise(r=>resolve=r));ui.show();
+  const pending=ui.q('#not-me').onclick();
+  assert.equal(ui.q('[data-feedback]').disabled,true);
+  assert.equal(ui.q('#not-me').disabled,true);
+  await ui.q('[data-feedback]').onclick();assert.equal(ui.apiCalls(),1);
+  resolve();await pending;
+  assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
+  assert.equal(ui.q('#not-me').textContent,'Отмечено');
+  assert.equal(ui.q('#not-me').disabled,true);
 });

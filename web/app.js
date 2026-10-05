@@ -32,7 +32,7 @@ function refreshViewer(){
   q('#viewer-position').textContent=(viewerIndex+1)+' / '+viewerItems.length;
   q('#viewer-prev').disabled=viewerIndex===0;q('#viewer-next').disabled=viewerIndex===viewerItems.length-1;
   q('#viewer-selection').hidden=!select;q('#viewer-check').checked=!!select?.checked;q('#viewer-check').disabled=!!select?.disabled;
-  const feedback=q('#not-me');feedback.hidden=!ticket||!select;feedback.disabled=!!select?.disabled;feedback.textContent=select?.disabled?'Отмечено':'Это не я';
+  const feedback=q('#not-me'),button=q('[data-feedback]',item);feedback.hidden=!ticket||!select;feedback.disabled=!!select?.disabled||!!button?.disabled;feedback.textContent=select?.disabled?'Отмечено':button?.disabled?'Отмечаем…':'Это не я';
 }
 function wireModal(box){qa('.photo-open',box).forEach(button=>{button.onclick=()=>{viewerItems=qa('.photo',box).filter(card=>q('[data-view]',card));viewerIndex=viewerItems.indexOf(button.closest('.photo'));refreshViewer();viewer.showModal();};});}
 q('#viewer-prev').onclick=()=>{if(viewerIndex>0){viewerIndex--;refreshViewer();}};
@@ -166,19 +166,28 @@ function results(result,photos){
   };
   feedbackHandler=async id=>{
     if(expireIfNeeded()||rejected.has(id))return;
-    await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket:result.ticket,photo_id:id,kind:'not_me'}},true);
-    if(!isCurrent())return;
-    rejected.add(id);
     const card=qa('[data-photo]',gallery).find(p=>p.dataset.photo===id),check=q('[data-select]',card),button=q('[data-feedback]',card);
-    check.checked=false;check.disabled=true;button.textContent='Отмечено';button.disabled=true;update();
+    if(button.disabled)return;
+    button.disabled=true;button.textContent='Отмечаем…';
+    if(viewer.open&&modalPhoto===id)refreshViewer();
+    try{
+      await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket:result.ticket,photo_id:id,kind:'not_me'}},true);
+      if(!isCurrent())return;
+      rejected.add(id);check.checked=false;check.disabled=true;update();
+    }finally{
+      if(!expireIfNeeded()){
+        button.disabled=rejected.has(id);button.textContent=rejected.has(id)?'Отмечено':'Это не я';
+        if(viewer.open&&modalPhoto===id)refreshViewer();
+      }
+    }
   };
   qa('[data-select]',gallery).forEach(x=>x.onchange=update);
   q('#select-all').onclick=()=>{const checks=qa('[data-select]',gallery).filter(x=>!x.disabled),all=checks.every(x=>x.checked);checks.forEach(x=>x.checked=!all);update();};
-  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){if(!expireIfNeeded()){b.disabled=false;stat('search-status',x.message,'error');}}});
+  qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;try{await feedbackHandler(b.dataset.feedback);}catch(x){if(!expireIfNeeded())stat('search-status',x.message,'error');}});
   q('#not-me').onclick=async()=>{
     if(expireIfNeeded()||!modalPhoto||!feedbackHandler)return;
     const id=modalPhoto;
-    try{await feedbackHandler(id);if(!expireIfNeeded()&&viewer.open&&modalPhoto===id)refreshViewer();}
+    try{await feedbackHandler(id);}
     catch(x){if(!expireIfNeeded()&&viewer.open&&modalPhoto===id)stat('viewer-status',x.message,'error');}
   };
   qa('.photo',gallery).forEach((card,i)=>{const name='Кадр '+String(i+1).padStart(2,'0');q('.photo-name',card).textContent=name;q('.photo-name',card).title=name;q('img',card).alt=name;q('.photo-open',card).setAttribute('aria-label','Открыть '+name);q('[data-select]',card).setAttribute('aria-label','Выбрать '+name);});wireModal(gallery);update();
