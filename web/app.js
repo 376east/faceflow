@@ -175,7 +175,12 @@ function results(result,photos){
   qa('[data-select]',gallery).forEach(x=>x.onchange=update);
   q('#select-all').onclick=()=>{const checks=qa('[data-select]',gallery).filter(x=>!x.disabled),all=checks.every(x=>x.checked);checks.forEach(x=>x.checked=!all);update();};
   qa('[data-feedback]',gallery).forEach(b=>b.onclick=async()=>{if(expireIfNeeded())return;b.disabled=true;try{await feedbackHandler(b.dataset.feedback);}catch(x){if(!expireIfNeeded()){b.disabled=false;stat('search-status',x.message,'error');}}});
-  q('#not-me').onclick=async()=>{if(expireIfNeeded()||!modalPhoto||!feedbackHandler)return;try{await feedbackHandler(modalPhoto);if(isCurrent())refreshViewer();}catch(x){if(isCurrent())stat('viewer-status',x.message,'error');}};
+  q('#not-me').onclick=async()=>{
+    if(expireIfNeeded()||!modalPhoto||!feedbackHandler)return;
+    const id=modalPhoto;
+    try{await feedbackHandler(id);if(!expireIfNeeded()&&viewer.open&&modalPhoto===id)refreshViewer();}
+    catch(x){if(!expireIfNeeded()&&viewer.open&&modalPhoto===id)stat('viewer-status',x.message,'error');}
+  };
   qa('.photo',gallery).forEach((card,i)=>{const name='Кадр '+String(i+1).padStart(2,'0');q('.photo-name',card).textContent=name;q('.photo-name',card).title=name;q('img',card).alt=name;q('.photo-open',card).setAttribute('aria-label','Открыть '+name);q('[data-select]',card).setAttribute('aria-label','Выбрать '+name);});wireModal(gallery);update();
 }
 q('#close-viewer').onclick=()=>viewer.close();q('#not-me').onclick=async()=>{if(!modalPhoto||!ticket)return;try{await api('/api/events/'+eventId+'/feedback',{method:'POST',body:{ticket,photo_id:modalPhoto,kind:'not_me'}},true);q('#not-me').textContent='Отмечено';}catch(x){alert(x.message);}};window.onbeforeunload=e=>{if(uploadInProgress){e.preventDefault();e.returnValue='';return;}clear();clearTimeout(resultTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);};q('.brand').addEventListener('click',e=>{if(uploadInProgress){e.preventDefault();stat('upload-status','Дождитесь завершения загрузки перед переходом.');}});eventId?guest():home();
