@@ -72,6 +72,21 @@ class Flow(unittest.TestCase):
     def search(self, event_id, guest, image, consent='yes'):
         return self.client.post('/api/events/'+event_id+'/search',headers=guest,data={'selfie':(io.BytesIO(jpg(image)),'selfie.jpg'),'consent':consent})
 
+    def test_large_closeup_selfie_is_found(self):
+        import recognition
+        eid, guest = self.create('Large closeup')
+        self.assertEqual(self.upload(eid, jpg(self.alpha)).status_code, 201)
+        self.wait(eid)
+        x, y, width, height = recognition.analyze(self.alpha)['faces'][0]['box']
+        closeup = self.alpha.crop((x-width*.15, y-height*.2, x+width*1.15, y+height*1.25))
+        scale = 1066 / closeup.height
+        closeup = closeup.resize((round(closeup.width * scale), 1066))
+        result = self.search(eid, guest, closeup)
+        self.assertEqual(result.status_code, 200, result.json)
+        self.assertEqual(result.json['count'], 1)
+        blank = self.search(eid, guest, Image.new('RGB', closeup.size, '#eee'))
+        self.assertEqual(blank.status_code, 400)
+
     def test_01_real_search_download_and_isolation(self):
         eid, guest = self.create()
         other, other_guest = self.create('Unrelated event')

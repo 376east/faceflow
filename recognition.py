@@ -71,6 +71,9 @@ def analyze(image, detailed=False):
                     candidates.append(mapped)
 
     detect_region(original)
+    if not candidates and max(w,h)>640:
+        # YuNet can miss a large closeup at native resolution.
+        detect_region(original,max_side=640)
     if detailed and max(w,h)>1800:
         # Overlapping tiles preserve small faces otherwise lost in downscaling.
         tile=1200;step=900
