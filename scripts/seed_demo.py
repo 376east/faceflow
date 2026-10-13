@@ -1,4 +1,4 @@
-"""Seed an isolated synthetic gallery through the real Flask API."""
+"""Seed an isolated demo gallery through the real Flask API."""
 import argparse
 import io
 import json
@@ -18,17 +18,20 @@ def jpg(image):
     return stream.getvalue()
 
 
-def load_dataset():
-    manifest_path = FIXTURES / 'event-manifest.json'
+def load_dataset(directory=None):
+    fixtures = (Path(directory) if directory is not None else FIXTURES).resolve()
+    manifest_path = fixtures / 'event-manifest.json'
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
         if manifest.get('version') != 2 or not manifest.get('photos') or not manifest.get('selfies'):
             raise ValueError('Expected version 2 event manifest with photos and selfies')
+        if 'description' in manifest and not isinstance(manifest['description'], str):
+            raise ValueError('Manifest description must be a string')
 
         def read(relative):
-            path = (FIXTURES / relative).resolve()
-            if not path.is_relative_to(FIXTURES.resolve()):
-                raise ValueError('Manifest path must stay inside demo/synthetic')
+            path = (fixtures / relative).resolve()
+            if not path.is_relative_to(fixtures):
+                raise ValueError('Manifest path must stay inside the dataset directory')
             return path.read_bytes()
 
         selfies = {identity: read(path) for identity, path in manifest['selfies'].items()}
@@ -40,9 +43,18 @@ def load_dataset():
             if name in names or not isinstance(people, list) or not set(people).issubset(selfies):
                 raise ValueError('Photo names must be unique and people must have selfies')
             names.add(name)
-            photos.append({'name': name, 'people': people, 'raw': read(item['file'])})
-        return {'title': manifest['title'], 'photos': photos, 'selfies': selfies, 'source': 'manifest-v2'}
-    with Image.open(FIXTURES / 'person-a.png') as a, Image.open(FIXTURES / 'person-b.png') as b:
+            photo = {'name': name, 'people': people, 'raw': read(item['file'])}
+            for field in ('scenario', 'difficulty'):
+                if field in item:
+                    if not isinstance(item[field], str) or not item[field].strip():
+                        raise ValueError(f'Photo {field} must be a nonempty string')
+                    photo[field] = item[field]
+            photos.append(photo)
+        dataset = {'title': manifest['title'], 'photos': photos, 'selfies': selfies, 'source': 'manifest-v2'}
+        if 'description' in manifest:
+            dataset['description'] = manifest['description']
+        return dataset
+    with Image.open(fixtures / 'person-a.png') as a, Image.open(fixtures / 'person-b.png') as b:
         return {'title': 'Demo Night · синтетическая съемка', 'source': 'legacy-fixtures',
                 'selfies': {'person-a': jpg(a), 'person-b': jpg(b)},
                 'photos': [
@@ -70,7 +82,7 @@ def seed(module, dataset, timeout=300, empty=False):
     client = module.app.test_client()
     admin = {'X-Admin-Key': module.CONFIG['admin']}
     eid = require(client.post('/api/events', headers=admin, json={
-        'title': dataset['title'], 'description': 'Все персонажи вымышленные. Демонстрация поиска на синтетических данных; не оценка точности на реальных событиях.',
+        'title': dataset['title'], 'description': dataset.get('description', 'Все персонажи вымышленные. Демонстрация поиска на синтетических данных; не оценка точности на реальных событиях.'),
         'consent': True}), 201)['id']
     if not empty:
         for photo in dataset['photos']:
@@ -99,17 +111,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--empty', action='store_true', help='Create a draft session without uploading photos')
     parser.add_argument('--timeout', type=float, default=300, help='Indexing deadline in seconds')
+    parser.add_argument('--dataset', type=Path, help='Dataset directory (default: demo/synthetic)')
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error('--timeout must be positive')
-    dataset = {'title': 'Demo Night · синтетическая съемка'} if args.empty else load_dataset()
+    dataset = {'title': 'Demo Night · синтетическая съемка'} if args.empty and args.dataset is None else load_dataset(args.dataset)
     module = import_app(ROOT / 'work/demo-data')
     try:
         _, eid, event = seed(module, dataset, args.timeout, args.empty)
         session = {'event_id': eid, 'admin_url': 'http://127.0.0.1:8766/#admin=' + module.CONFIG['admin'],
                    'guest_url': f'http://127.0.0.1:8766/e/{eid}#g=' + event['guest'], 'data_path': str(module.DATA)}
         (ROOT / 'work/demo-session.json').write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding='utf-8')
-        print(f'Synthetic gallery: {event["ready"]}/{event["total"]} ready, {event["errors"]} errors.')
+        print(f'Demo gallery: {event["ready"]}/{event["total"]} ready, {event["errors"]} errors.')
         print('Local session URLs: work/demo-session.json (never commit).')
     finally:
         module.pool.shutdown(wait=True)
