@@ -1,0 +1,693 @@
+{
+  "version": 2,
+  "title": "Клуб 600 · синтетическая конференция",
+  "photos": [
+    {
+      "file": "event/conference-001.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "pilot01"
+    },
+    {
+      "file": "event/conference-002.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "pilot01"
+    },
+    {
+      "file": "event/conference-003.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "pilot01"
+    },
+    {
+      "file": "event/conference-004.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "pilot01"
+    },
+    {
+      "file": "event/conference-005.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "pilot02"
+    },
+    {
+      "file": "event/conference-006.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "pilot02"
+    },
+    {
+      "file": "event/conference-007.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "pilot02"
+    },
+    {
+      "file": "event/conference-008.jpg",
+      "people": [
+        "aya",
+        "arjun"
+      ],
+      "sheet": "pilot02"
+    },
+    {
+      "file": "event/conference-009.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya1"
+    },
+    {
+      "file": "event/conference-010.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya1"
+    },
+    {
+      "file": "event/conference-011.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya1"
+    },
+    {
+      "file": "event/conference-012.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya1"
+    },
+    {
+      "file": "event/conference-013.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya2"
+    },
+    {
+      "file": "event/conference-014.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya2"
+    },
+    {
+      "file": "event/conference-015.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya2"
+    },
+    {
+      "file": "event/conference-016.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya2"
+    },
+    {
+      "file": "event/conference-017.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya3"
+    },
+    {
+      "file": "event/conference-018.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya3"
+    },
+    {
+      "file": "event/conference-019.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya3"
+    },
+    {
+      "file": "event/conference-020.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya3"
+    },
+    {
+      "file": "event/conference-021.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya4"
+    },
+    {
+      "file": "event/conference-022.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya4"
+    },
+    {
+      "file": "event/conference-023.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya4"
+    },
+    {
+      "file": "event/conference-024.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya4"
+    },
+    {
+      "file": "event/conference-025.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya5"
+    },
+    {
+      "file": "event/conference-026.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya5"
+    },
+    {
+      "file": "event/conference-027.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya5"
+    },
+    {
+      "file": "event/conference-028.jpg",
+      "people": [
+        "aya"
+      ],
+      "sheet": "aya5"
+    },
+    {
+      "file": "event/conference-029.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun1"
+    },
+    {
+      "file": "event/conference-030.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun1"
+    },
+    {
+      "file": "event/conference-031.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun1"
+    },
+    {
+      "file": "event/conference-032.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun1"
+    },
+    {
+      "file": "event/conference-033.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun2"
+    },
+    {
+      "file": "event/conference-034.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun2"
+    },
+    {
+      "file": "event/conference-035.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun2"
+    },
+    {
+      "file": "event/conference-036.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun2"
+    },
+    {
+      "file": "event/conference-037.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun3"
+    },
+    {
+      "file": "event/conference-038.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun3"
+    },
+    {
+      "file": "event/conference-039.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun3"
+    },
+    {
+      "file": "event/conference-040.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun3"
+    },
+    {
+      "file": "event/conference-041.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun4"
+    },
+    {
+      "file": "event/conference-042.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun4"
+    },
+    {
+      "file": "event/conference-043.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun4"
+    },
+    {
+      "file": "event/conference-044.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun4"
+    },
+    {
+      "file": "event/conference-045.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun5"
+    },
+    {
+      "file": "event/conference-046.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun5"
+    },
+    {
+      "file": "event/conference-047.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun5"
+    },
+    {
+      "file": "event/conference-048.jpg",
+      "people": [
+        "arjun"
+      ],
+      "sheet": "arjun5"
+    },
+    {
+      "file": "event/conference-049.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei1"
+    },
+    {
+      "file": "event/conference-050.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei1"
+    },
+    {
+      "file": "event/conference-051.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei1"
+    },
+    {
+      "file": "event/conference-052.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei1"
+    },
+    {
+      "file": "event/conference-053.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei2"
+    },
+    {
+      "file": "event/conference-054.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei2"
+    },
+    {
+      "file": "event/conference-055.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei2"
+    },
+    {
+      "file": "event/conference-056.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei2"
+    },
+    {
+      "file": "event/conference-057.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei3"
+    },
+    {
+      "file": "event/conference-058.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei3"
+    },
+    {
+      "file": "event/conference-059.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei3"
+    },
+    {
+      "file": "event/conference-060.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei3"
+    },
+    {
+      "file": "event/conference-061.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei4"
+    },
+    {
+      "file": "event/conference-062.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei4"
+    },
+    {
+      "file": "event/conference-063.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei4"
+    },
+    {
+      "file": "event/conference-064.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei4"
+    },
+    {
+      "file": "event/conference-065.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei5"
+    },
+    {
+      "file": "event/conference-066.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei5"
+    },
+    {
+      "file": "event/conference-067.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei5"
+    },
+    {
+      "file": "event/conference-068.jpg",
+      "people": [
+        "mei"
+      ],
+      "sheet": "mei5"
+    },
+    {
+      "file": "event/conference-069.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max1"
+    },
+    {
+      "file": "event/conference-070.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max1"
+    },
+    {
+      "file": "event/conference-071.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max1"
+    },
+    {
+      "file": "event/conference-072.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max1"
+    },
+    {
+      "file": "event/conference-073.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max2"
+    },
+    {
+      "file": "event/conference-074.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max2"
+    },
+    {
+      "file": "event/conference-075.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max2"
+    },
+    {
+      "file": "event/conference-076.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max2"
+    },
+    {
+      "file": "event/conference-077.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max3"
+    },
+    {
+      "file": "event/conference-078.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max3"
+    },
+    {
+      "file": "event/conference-079.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max3"
+    },
+    {
+      "file": "event/conference-080.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max3"
+    },
+    {
+      "file": "event/conference-081.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max4"
+    },
+    {
+      "file": "event/conference-082.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max4"
+    },
+    {
+      "file": "event/conference-083.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max4"
+    },
+    {
+      "file": "event/conference-084.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max4"
+    },
+    {
+      "file": "event/conference-085.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max5"
+    },
+    {
+      "file": "event/conference-086.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max5"
+    },
+    {
+      "file": "event/conference-087.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max5"
+    },
+    {
+      "file": "event/conference-088.jpg",
+      "people": [
+        "max"
+      ],
+      "sheet": "max5"
+    },
+    {
+      "file": "event/conference-089.jpg",
+      "people": [
+        "aya",
+        "mei"
+      ],
+      "sheet": "group01"
+    },
+    {
+      "file": "event/conference-090.jpg",
+      "people": [
+        "arjun",
+        "max"
+      ],
+      "sheet": "group01"
+    },
+    {
+      "file": "event/conference-091.jpg",
+      "people": [
+        "aya",
+        "max"
+      ],
+      "sheet": "group01"
+    },
+    {
+      "file": "event/conference-092.jpg",
+      "people": [
+        "arjun",
+        "mei"
+      ],
+      "sheet": "group01"
+    },
+    {
+      "file": "event/conference-093.jpg",
+      "people": [
+        "aya",
+        "arjun"
+      ],
+      "sheet": "group02"
+    },
+    {
+      "file": "event/conference-094.jpg",
+      "people": [
+        "mei",
+        "max"
+      ],
+      "sheet": "group02"
+    },
+    {
+      "file": "event/conference-095.jpg",
+      "people": [
+        "aya",
+        "mei"
+      ],
+      "sheet": "group02"
+    },
+    {
+      "file": "event/conference-096.jpg",
+      "people": [
+        "arjun",
+        "max"
+      ],
+      "sheet": "group02"
+    }
+  ],
+  "selfies": {
+    "aya": "selfies/aya.jpg",
+    "arjun": "selfies/arjun.jpg",
+    "mei": "selfies/mei.jpg",
+    "max": "selfies/max.jpg"
+  }
+}
