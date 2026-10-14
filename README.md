@@ -88,7 +88,7 @@ python -m unittest discover -s tests -v
 node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs tests/test_search.cjs tests/test_expiry.cjs
 ```
 
-[CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. В артефакте `coverage-report` каждого прогона доступны HTML и JSON покрытия строк и ветвей `app.py` и `recognition.py`; это покрытие кода, не точность распознавания. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).
+[CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. Отчёт покрытия строк и ветвей `app.py` и `recognition.py` доступен в логах и сводке каждого прогона; это покрытие кода, не точность распознавания. CI запускается на push в `main`, pull request и вручную. Для скачивания HTML и JSON при ручном запуске включите `upload_coverage`: архив `coverage-report` хранится семь дней. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).
 
 Чтобы измерить покрытие локально:
 

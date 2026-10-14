@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      upload_coverage:
+        description: Save downloadable HTML and JSON coverage reports
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -53,8 +58,11 @@ jobs:
           python -m coverage html -d work/coverage/html
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m coverage json -o work/coverage/coverage.json
-      - name: Save coverage report
-        if: always()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m coverage report --format=markdown | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Save downloadable coverage report
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.upload_coverage }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-report
