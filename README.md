@@ -2,25 +2,25 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4&color=blue&labelColor=555&style=flat" alt="Демо: MP4"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
+<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4&color=blue&labelColor=555&style=flat" alt="Демо: MP4"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
 
-**[Демо](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Для агента](AGENTS.md)**
+**[Демо](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/product/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Для агента](AGENTS.md)**
 
 ## Как выглядит
 
-Скриншоты ниже показывают прежнее оформление на синтетической съёмке: 96 кадров и четыре повторяющихся персонажа. Актуальный интерфейс использует светлые нейтральные поверхности, синие кнопки и прямые подписи действий. [Происхождение исходников](demo/synthetic/PROVENANCE.md). Демо в навигации - скачиваемый MP4 с русскими субтитрами, без звука.
+Актуальный интерфейс на реальной съёмке Wikimania 2019: светлые поверхности, синие кнопки и прямые подписи действий. Демо в навигации - 50 секунд, русские субтитры, без звука. [Авторы и лицензии снимков](demo/product/credits.md).
 
 **1. Открыть съёмку и добавить селфи**
 
-<img src="demo/frames/guest.png" alt="Гостевая страница: загрузка селфи, согласие и поиск своих фотографий" width="760">
+<img src="demo/product/frames/guest.png" alt="Гостевая страница: загрузка селфи, согласие и поиск своих фотографий" width="760">
 
 **2. Проверить результаты и выбрать кадры для ZIP**
 
-<img src="demo/frames/selected.png" alt="Найдены 28 кадров, три выбраны для скачивания подборки" width="760">
+<img src="demo/product/frames/selected.png" alt="Найдены три кадра, два выбраны для скачивания подборки" width="760">
 
 **3. Рассмотреть фотографию перед скачиванием**
 
-<img src="demo/frames/viewer.png" alt="Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра" width="760">
+<img src="demo/product/frames/viewer.png" alt="Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра" width="760">
 
 ## Что работает
 
