@@ -28,6 +28,7 @@ function guestLink(id,key){return location.origin+'/e/'+id+'#g='+key;}
 function setFaceMarker(marker,style){
   if(!marker)return;
   marker.hidden=!style;
+  const top=Number((style.match(/top:([\d.]+)%/)||[])[1]);marker.setAttribute('data-pointer',top<20?'below':'above');
   for(const property of ['left','top','width','height'])marker.style.removeProperty(property);
   if(style)for(const part of style.split(';')){const [name,value]=part.split(':');if(['left','top','width','height'].includes(name))marker.style.setProperty(name,value);}
 }
