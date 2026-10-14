@@ -2,13 +2,13 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4&color=blue&labelColor=555&style=flat" alt="Демо: MP4"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
+<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/blob/main/demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4&color=blue&labelColor=555&style=flat" alt="Демо: MP4"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
 
-**[Демо](https://github.com/malyarq/faceflow/raw/refs/heads/main/demo/product/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Для агента](AGENTS.md)**
+**[Демо](https://github.com/malyarq/faceflow/blob/main/demo/product/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Разработка](#разработка)**
 
 ## Как выглядит
 
-Актуальный интерфейс на реальной съёмке Wikimania 2019: светлые поверхности, синие кнопки и прямые подписи действий. Демо в навигации - 50 секунд, русские субтитры, без звука. [Авторы и лицензии снимков](demo/product/credits.md).
+Демо на фотографиях Wikimania 2019 показывает путь от загрузки съёмки до поиска по селфи и скачивания подборки. Ролик - 50 секунд, русские субтитры, без звука. [Авторы и лицензии снимков](demo/product/credits.md).
 
 **1. Открыть съёмку и добавить селфи**
 
@@ -46,15 +46,7 @@ python app.py --open
 
 Если PowerShell запрещает активацию, выполняйте команды через `.venv/Scripts/python.exe`. Активация нужна только для сокращения команды `python`.
 
-Для демонстрации без личных фотографий после установки моделей:
-
-```powershell
-$env:FACEFLOW_DATA = './work/demo-data'
-python scripts/seed_demo.py
-python app.py --port 8766 --open
-```
-
-Скрипт добавляет отдельную съёмку с 96 синтетическими фотографиями по манифесту. Секретные URL сохраняются в исключённом из Git `work/demo-session.json`; сидер всегда использует `work/demo-data`. После остановки демо через Ctrl+C выполните `Remove-Item Env:FACEFLOW_DATA`. [Подробности, результаты проверки и пересборка ролика](docs/DEMO.md), [скрипт](scripts/seed_demo.py).
+Для проверки без личных фотографий есть отдельный синтетический альбом. [Запуск демо](docs/DEMO.md#запуск), [актуальный ролик и материалы](demo/product/README.md).
 
 ## Архитектура
 
@@ -77,7 +69,7 @@ flowchart LR
 
 YuNet и SFace - нейросетевые модели, работающие локально на CPU. Сопоставление векторов использует унаследованный порог `0.60`, проверки размера и размытия лица - эвристики. LLM и облачного inference в поиске нет. Веса закреплены по ревизии и SHA-256, скачиваются отдельно и не входят в Git. [Распознавание](recognition.py), [порог](evaluation/threshold.json), [manifest](models/manifest.json).
 
-Независимая точность на реальных людях не измерена. Два синтетических портрета и изменение яркости одного исходника проверяют цепочку, но не качество на мероприятиях. Возможны пропуски и чужие кадры; результаты нужно проверять глазами. Не проверены большие съёмки, Linux, все браузеры и удобство для реальных пользователей. Время обработки, память и диск зависят от снимков и компьютера. [Проверки и их границы](docs/VERIFICATION.md), [план](PLAN.md).
+Независимая точность на реальных людях не измерена. Автотесты на синтетических исходниках проверяют работу приложения, а демо на реальных фотографиях показывает интерфейс. Ни то ни другое не заменяет независимую оценку распознавания. Возможны пропуски и чужие кадры; результаты нужно проверять глазами. Не проверены большие съёмки, Linux, все браузеры и удобство для реальных пользователей. Время обработки, память и диск зависят от снимков и компьютера. [Проверки и их границы](docs/VERIFICATION.md), [план](PLAN.md).
 
 Доступ основан на секретных ссылках, отдельного rate limiting нет, файлы на диске не шифруются приложением. Безопасность интернет-хостинга не проверена; приложение локально и в интернет не развёрнуто. [Доступ и ограничения](docs/ARCHITECTURE.md).
 
