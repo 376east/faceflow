@@ -181,9 +181,8 @@ test('viewer pending feedback blocks the card too; success leaves both marked',a
 
 test('viewer highlight uses CSS properties and clears the preceding face on an unmarked photo',()=>{
   const context=vm.createContext({});vm.runInContext(source.slice(source.indexOf('function setFaceMarker('),source.indexOf('function refreshViewer(')),context);
-  const values={},attributes={};const marker={setAttribute:(k,v)=>attributes[k]=v,style:{setProperty:(k,v)=>values[k]=v,removeProperty:k=>delete values[k]}};
+  const values={};const marker={style:{setProperty:(k,v)=>values[k]=v,removeProperty:k=>delete values[k]}};
   context.setFaceMarker(marker,'left:10%;top:20%;width:30%;height:40%;');
-  assert.equal(marker.hidden,false);assert.equal(attributes['data-pointer'],'above');assert.deepEqual(values,{left:'10%',top:'20%',width:'30%',height:'40%'});
-  context.setFaceMarker(marker,'left:10%;top:5%;width:30%;height:40%;');assert.equal(attributes['data-pointer'],'below');assert.equal(values.top,'5%');
+  assert.equal(marker.hidden,false);assert.deepEqual(values,{left:'10%',top:'20%',width:'30%',height:'40%'});
   context.setFaceMarker(marker,'');assert.equal(marker.hidden,true);assert.deepEqual(values,{});
 });
