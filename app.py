@@ -68,6 +68,15 @@ def db():
         connection.close()
 
 
+def migrate_face_boxes(conn):
+    """Queue old face indexes once; retain their rows and stored photographs."""
+    if 'box' not in {row[1] for row in conn.execute('PRAGMA table_info(faces)')}:
+        conn.execute('ALTER TABLE faces ADD COLUMN box TEXT')
+    return conn.execute("""UPDATE photos SET status='pending',error=NULL,count=0,generation=generation+1
+        WHERE status='ready' AND EXISTS
+        (SELECT 1 FROM faces WHERE faces.photo=photos.id AND faces.box IS NULL)""").rowcount
+
+
 with db() as conn:
     conn.executescript('''
     PRAGMA journal_mode=WAL;
@@ -89,6 +98,7 @@ with db() as conn:
         present={r['name'] for r in conn.execute(f'PRAGMA table_info({table})')}
         for name,definition in additions.items():
             if name not in present:conn.execute(f'ALTER TABLE {table} ADD COLUMN {name} {definition}')
+    migrate_face_boxes(conn)
     if conn.execute('PRAGMA user_version').fetchone()[0]<2:
         for row in conn.execute('SELECT id,event FROM photos').fetchall():
             stored=DATA/row['event']/(row['id']+'.jpg')
@@ -120,6 +130,15 @@ def features(image):
     return [face['vector'] for face in analyze(image)['faces']]
 
 
+def normalized_face_box(box, width, height):
+    if box is None or width <= 0 or height <= 0:
+        return None
+    x, y, w, h = box
+    left, top = max(0, min(width, x)), max(0, min(height, y))
+    right, bottom = max(left, min(width, x+w)), max(top, min(height, y+h))
+    return [left/width, top/height, (right-left)/width, (bottom-top)/height]
+
+
 def index_photo(photo_id):
     photo = None
     try:
@@ -139,7 +158,8 @@ def index_photo(photo_id):
             if not current or current['generation']!=photo['generation']:return
             thumb.save(folder/(photo_id+'-thumb.jpg'),quality=82)
             conn.execute('DELETE FROM faces WHERE photo=?', (photo_id,))
-            conn.executemany('INSERT INTO faces VALUES (?,?)',[(photo_id,f['vector'].tobytes()) for f in result['faces']])
+            conn.executemany('INSERT INTO faces(photo,vector,box) VALUES (?,?,?)',
+                [(photo_id,f['vector'].tobytes(),json.dumps(f['box']) if f.get('box') is not None else None) for f in result['faces']])
             conn.execute("UPDATE photos SET status='ready',count=?,error=NULL,width=?,height=?,warnings=?,duration_ms=? WHERE id=?",(len(result['faces']),result['width'],result['height'],json.dumps(flags),result['duration_ms'],photo_id))
     except Exception:
         logging.exception('Index failed for %s',photo_id)
@@ -456,12 +476,13 @@ def search(event_id):
             if progress['pending'] or not progress['ready']:
                 return jsonify(error='Галерея ещё не готова. Подождите завершения обработки.'), 409
             with db() as conn:
-                rows = conn.execute('SELECT p.id,p.name,f.vector FROM photos p JOIN faces f ON p.id=f.photo WHERE p.event=? AND p.status=?', (event_id, 'ready')).fetchall()
+                rows = conn.execute('SELECT p.id,p.name,p.width,p.height,f.vector,f.box FROM photos p JOIN faces f ON p.id=f.photo WHERE p.event=? AND p.status=?', (event_id, 'ready')).fetchall()
             best = {}
             for row in rows:
                 score = float(np.dot(query, np.frombuffer(row['vector'], dtype=np.float32)))
                 if score >= THRESHOLD and (row['id'] not in best or score > best[row['id']]['score']):
-                    best[row['id']] = {'id': row['id'], 'name': row['name'], 'score': score}
+                    best[row['id']] = {'id': row['id'], 'name': row['name'], 'score': score,
+                        'face_box': normalized_face_box(json.loads(row['box']) if row['box'] is not None else None, row['width'], row['height'])}
             matches = sorted(best.values(), key=lambda row: row['score'], reverse=True)
             ticket = make_ticket(event_id,[p['id'] for p in matches],version=current['link_version'])
             for item in matches:

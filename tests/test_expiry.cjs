@@ -4,11 +4,11 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const source=require('node:fs').readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');
 const code=source.slice(source.indexOf('function results('),source.indexOf("q('#close-viewer').onclick="));
-const viewerCode=source.slice(source.indexOf('function refreshViewer('),source.indexOf('function wireModal('));
+const viewerCode=source.slice(source.indexOf('function setFaceMarker('),source.indexOf('function wireModal('));
 function setup(apiResponse){
   let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0,refreshed=0;
   const timers=new Map(),nodes=new Map();
-  const node=()=>({disabled:false,hidden:false,checked:false,dataset:{},handlers:{},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},before(){},addEventListener(name,fn){this.handlers[name]=fn;}});
+  const node=()=>({disabled:false,hidden:false,checked:false,dataset:{},style:{removeProperty(){},setProperty(){}},handlers:{},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},before(){},addEventListener(name,fn){this.handlers[name]=fn;}});
   const q=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
   const card=node();card.dataset.photo='one';
   const check=q('[data-select]');check.dataset.select='one';
@@ -176,4 +176,13 @@ test('viewer pending feedback blocks the card too; success leaves both marked',a
   assert.equal(ui.q('[data-feedback]').textContent,'Отмечено');
   assert.equal(ui.q('#not-me').textContent,'Отмечено');
   assert.equal(ui.q('#not-me').disabled,true);
+});
+
+
+test('viewer highlight uses CSS properties and clears the preceding face on an unmarked photo',()=>{
+  const context=vm.createContext({});vm.runInContext(source.slice(source.indexOf('function setFaceMarker('),source.indexOf('function refreshViewer(')),context);
+  const values={};const marker={style:{setProperty:(k,v)=>values[k]=v,removeProperty:k=>delete values[k]}};
+  context.setFaceMarker(marker,'left:10%;top:20%;width:30%;height:40%;');
+  assert.equal(marker.hidden,false);assert.deepEqual(values,{left:'10%',top:'20%',width:'30%',height:'40%'});
+  context.setFaceMarker(marker,'');assert.equal(marker.hidden,true);assert.deepEqual(values,{});
 });

@@ -73,10 +73,12 @@ warnings: string[]; preview, download: relative URL
 
 Поиск доступен только в `published` съёмке, когда очередь пуста и есть готовые фотографии, иначе `409`. На селфи должно детектироваться ровно одно лицо; лицо с `small_face` отклоняется (`400`). `blurred_face` само по себе не является серверным запретом. [app.py: search](../app.py), [recognition.py: analyze](../recognition.py).
 
+`photos[].face_box` - `[x, y, width, height]` в долях размера полного JPEG (0..1), для лица с лучшим совпадением в кадре. `null` допустим, если координат ещё нет. Клиент показывает рамку поверх фото; скачиваемые JPEG и ZIP не изменяются. [app.py: index_photo, search, media, download](../app.py), [web/app.js: faceBoxStyle, photo, refreshViewer](../web/app.js).
+
 ```json
 {
   "photos": [
-    {"id": "photo-id", "name": "frame.png", "preview": "/media/...", "download": "/media/..."}
+    {"id": "photo-id", "name": "frame.png", "face_box": [0.1, 0.2, 0.08, 0.12], "preview": "/media/...", "download": "/media/..."}
   ],
   "zip": "/api/events/event-id/download?ticket=...",
   "ticket": "signed-value",

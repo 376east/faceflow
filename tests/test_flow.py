@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import os
+import sqlite3
 import sys
 from pathlib import Path
 import tempfile
@@ -103,19 +104,47 @@ class Flow(unittest.TestCase):
         info=self.wait(eid);self.wait(other)
         self.assertEqual(info['total'],3);self.assertEqual(info['errors'],0);self.assertGreaterEqual(info['faces'],3)
         query=ImageEnhance.Brightness(self.alpha).enhance(.85)
+        clean_group=(module.DATA/eid/(group_id+'.jpg')).read_bytes()
+        clean_preview=(module.DATA/eid/(group_id+'-thumb.jpg')).read_bytes()
         files_before=sorted(str(p.relative_to(module.DATA)) for p in module.DATA.rglob('*') if p.is_file())
         result=self.search(eid,guest,query);self.assertEqual(result.status_code,200)
         files_after=sorted(str(p.relative_to(module.DATA)) for p in module.DATA.rglob('*') if p.is_file())
         self.assertEqual(files_before,files_after)
         self.assertEqual([p['id'] for p in result.json['photos']],[group_id])
         photo=result.json['photos'][0]
-        self.assertEqual(self.client.get(photo['preview']).status_code,200)
+        x,y,w,h=photo['face_box']
+        self.assertLess(x+w/2,.5)
+        self.assertTrue(all(0<=value<=1 for value in (x,y,w,h)))
+        self.assertLessEqual(x+w,1);self.assertLessEqual(y+h,1)
+        preview=self.client.get(photo['preview']);self.assertEqual(preview.status_code,200)
+        self.assertEqual(preview.data,clean_preview)
         downloaded=self.client.get(photo['download']);self.assertEqual(downloaded.status_code,200)
+        self.assertEqual(downloaded.data,clean_group)
         self.assertIn('attachment',downloaded.headers['Content-Disposition'])
         archive=self.client.get(result.json['zip']);self.assertEqual(archive.status_code,200)
         with zipfile.ZipFile(io.BytesIO(archive.data)) as zipped:
             self.assertEqual(len(zipped.namelist()),1)
             self.assertTrue(zipped.namelist()[0].endswith('group.jpg'))
+            self.assertEqual(zipped.read(zipped.namelist()[0]),clean_group)
+        beta_result=self.search(eid,guest,self.beta);self.assertEqual(beta_result.status_code,200)
+        beta_group=next(item for item in beta_result.json['photos'] if item['id']==group_id)
+        bx,by,bw,bh=beta_group['face_box']
+        self.assertGreater(bx+bw/2,.5)
+        self.assertNotEqual(photo['face_box'],beta_group['face_box'])
+        self.assertEqual(self.client.get(beta_group['download']).data,clean_group)
+        beta_archive=self.client.get(beta_result.json['zip'])
+        self.assertEqual(beta_archive.status_code,200)
+        with zipfile.ZipFile(io.BytesIO(beta_archive.data)) as zipped:
+            for name in zipped.namelist():
+                matched=next(item for item in beta_result.json['photos'] if name.endswith('_'+item['name']))
+                self.assertEqual(zipped.read(name),(module.DATA/eid/(matched['id']+'.jpg')).read_bytes())
+        with module.db() as conn:
+            conn.execute('UPDATE faces SET box=NULL WHERE photo=?',(group_id,))
+        unboxed=self.search(eid,guest,query)
+        self.assertEqual(unboxed.status_code,200)
+        self.assertIsNone(unboxed.json['photos'][0]['face_box'])
+        self.assertEqual((module.DATA/eid/(group_id+'.jpg')).read_bytes(),clean_group)
+        self.assertEqual((module.DATA/eid/(group_id+'-thumb.jpg')).read_bytes(),clean_preview)
         self.assertEqual(self.client.get(f'/media/{eid}/{group_id}').status_code,403)
         self.assertEqual(self.client.get(photo['download'].replace(eid,other)).status_code,403)
         self.assertEqual(self.client.get('/api/events/'+eid,headers=other_guest).status_code,403)
@@ -291,6 +320,35 @@ class Flow(unittest.TestCase):
         finally:release.set()
         self.assertFalse((module.DATA/eid).exists())
         self.assertEqual(self.client.get('/api/events/'+eid,headers=self.admin).status_code,404)
+
+
+class FaceBoxMigration(unittest.TestCase):
+    def test_additive_migration_and_queue_are_idempotent(self):
+        with sqlite3.connect(':memory:') as conn:
+            conn.executescript('''
+                CREATE TABLE photos(id TEXT PRIMARY KEY,status TEXT,error TEXT,count INTEGER,generation INTEGER);
+                CREATE TABLE faces(photo TEXT,vector BLOB);
+                INSERT INTO photos VALUES ('old','ready',NULL,2,4),('blank','ready',NULL,0,0),
+                    ('pending','pending',NULL,1,7),('failed','error','keep',1,2);
+                INSERT INTO faces(photo,vector) VALUES ('old',X'01'),('old',X'02'),
+                    ('pending',X'03'),('failed',X'04');
+            ''')
+            self.assertEqual(module.migrate_face_boxes(conn),1)
+            conn.execute("INSERT INTO photos VALUES ('new','ready',NULL,1,8)")
+            conn.execute("INSERT INTO faces(photo,vector,box) VALUES ('new',X'05','[1,2,3,4]')")
+            expected=[('blank','ready',None,0,0),('failed','error','keep',1,2),
+                      ('new','ready',None,1,8),('old','pending',None,0,5),('pending','pending',None,1,7)]
+            self.assertEqual(conn.execute('SELECT * FROM photos ORDER BY id').fetchall(),expected)
+            self.assertEqual(module.migrate_face_boxes(conn),0)
+            self.assertEqual(conn.execute('SELECT * FROM photos ORDER BY id').fetchall(),expected)
+            self.assertEqual(conn.execute('SELECT photo,hex(vector) FROM faces ORDER BY vector').fetchall(),
+                             [('old','01'),('old','02'),('pending','03'),('failed','04'),('new','05')])
+
+    def test_box_clipping_and_missing_dimensions(self):
+        self.assertEqual(module.normalized_face_box([-10,-20,130,140],100,100),[0,0,1,1])
+        self.assertEqual(module.normalized_face_box([80,90,40,30],100,100),[.8,.9,.2,.1])
+        self.assertIsNone(module.normalized_face_box(None,100,100))
+        self.assertIsNone(module.normalized_face_box([1,2,3,4],0,100))
 
 
 if __name__=='__main__':

@@ -29,7 +29,7 @@ flowchart LR
 1. `upload` проверяет административный ключ, формат и ограничения. Pillow применяет EXIF orientation и переводит изображение в RGB; копия сохраняется JPEG с quality 95, без переноса EXIF. SHA-256 исходных байтов используется для дедупликации внутри съёмки, имя файла хранится как метаданные. Оригинал пользователя не меняется. [app.py: decode, upload](../app.py).
 2. В SQLite появляется `pending`. Один worker вызывает `index_photo`; дорогой inference выполняется вне общей блокировки. Проверка `generation` перед записью защищает от результата устаревшей переиндексации. Создаются превью до 720×720 и записи `faces`, статус становится `ready` либо `error`. [app.py: pool, index_photo, requeue](../app.py).
 3. `analyze` переводит изображение в BGR, детектирует лица YuNet, удаляет пересекающиеся кандидаты, выравнивает лицо и строит нормализованный float32-вектор SFace. Если на изображении с большой стороной более 640 пикселей лиц не найдено, детекция повторяется с уменьшением до 640: это позволяет обработать крупный план лица. Флаги `small_face` и `blurred_face` являются эвристиками. `detailed` добавляет перекрывающиеся плитки для изображений с большой стороной более 1800 пикселей. [recognition.py: analyze, overlap](../recognition.py).
-4. `search` принимает согласие `consent=yes` и селфи. Нужно ровно одно найденное лицо без `small_face`. Селфи и multipart-поток находятся в памяти: приложение не записывает их в свою файловую систему. После проверки готовности съёмки сравниваются только её `ready`-векторы. Для каждого фото выбирается лучшее совпадение от порога; числовой score удаляется из ответа. [app.py: MemoryUploadRequest, search](../app.py).
+4. `search` принимает согласие `consent=yes` и селфи. Нужно ровно одно найденное лицо без `small_face`. Селфи и multipart-поток находятся в памяти: приложение не записывает их в свою файловую систему. После проверки готовности съёмки сравниваются только её `ready`-векторы. Для каждого фото выбирается лучшее совпадение от порога; координаты именно этого лица возвращаются как `face_box`, числовой score удаляется из ответа. [app.py: MemoryUploadRequest, search](../app.py).
 5. Клиент получает разрешённые ID и подписанные ссылки. `media` и `download` заново проверяют ticket и существование файлов. ZIP собирается в памяти с лимитом 256 МиБ суммарных JPEG; это не лимит общего потребления RAM процесса. [app.py: access_ticket, media, download](../app.py).
 
 Порог `0.60` унаследован и задаётся [evaluation/threshold.json](../evaluation/threshold.json). Независимая оценка точности в текущей реализации отсутствует; [тесты](../tests/test_flow.py) проверяют цепочку на синтетических исходниках.
@@ -53,11 +53,11 @@ flowchart LR
 | --- | --- |
 | `events` | `id` PK, `title`, `guest`, `created`, `description`, `status`, `detailed`, `link_version` |
 | `photos` | `id` PK, `event` FK, `name`, `hash`, `size`, `status`, `error`, `count`, `width`, `height`, `warnings`, `generation`, `duration_ms`; UNIQUE(event, hash) |
-| `faces` | `photo` FK, `vector` BLOB: нормализованный float32-вектор |
+| `faces` | `photo` FK, `vector` BLOB, `box` nullable JSON; вектор нормализован, рамка в исходных пикселях |
 | `metrics` | PK(event, name), `count`; names: views, searches, downloads |
 | `feedback` | `event` FK, `photo` FK, `grant` (SHA-256 ticket), `kind`, `created`; UNIQUE(event, photo, grant, kind) |
 
-SQLite включает WAL, foreign keys и secure_delete. FK удаляются каскадно; добавочные миграции выполняются при импорте, `user_version=2` используется для обновления `size`. Это не отдельный migration framework. [app.py: db и блок создания схемы](../app.py).
+SQLite включает WAL, foreign keys и secure_delete. FK удаляются каскадно; добавочные миграции выполняются при импорте, `user_version=2` используется для обновления `size`. Старые готовые фото с лицами без координат рамки ставятся в очередь для переиндексации; исходные JPEG сохраняются. Это не отдельный migration framework. [app.py: db и блок создания схемы](../app.py).
 
 ## Жизненный цикл и конкуренция
 
