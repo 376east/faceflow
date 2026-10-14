@@ -11,11 +11,11 @@ function setup(code,published){
   vm.runInContext(code,context);
   return {q,patches};
 }
-test('settings save does not overwrite publication state',async()=>{
+test('settings save preserves publication and recognition settings',async()=>{
   const start=source.indexOf("q('#save').onclick=");
   const ui=setup(source.slice(start,source.indexOf("const input=q('#photos')",start)),true);
   await ui.q('#save').onclick();
-  assert.deepEqual(ui.patches,[{title:'New title',description:'New description',detailed:false}]);
+  assert.deepEqual(ui.patches,[{title:'New title',description:'New description'}]);
   assert.equal(ui.q('#save').disabled,false);
 });
 

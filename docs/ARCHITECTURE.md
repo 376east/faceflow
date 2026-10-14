@@ -61,7 +61,7 @@ SQLite включает WAL, foreign keys и secure_delete. FK удаляютс�
 
 ## Жизненный цикл и конкуренция
 
-Новая съёмка - `draft`; публикация требует хотя бы одного `ready` и нулевой очереди `pending`. `paused` закрывает поиск и гостевые media tickets. Изменение `detailed` заново ставит все фотографии в очередь, retry - только ошибки. Статусы фото: `pending`, `ready`, `error`. [app.py: create_event, update_event, requeue, search, access_ticket](../app.py).
+Новая съёмка - `draft`, с включённым `detailed`; публикация требует хотя бы одного `ready` и нулевой очереди `pending`. `paused` закрывает поиск и гостевые media tickets. Изменение `detailed` заново ставит все фотографии в очередь, retry - только ошибки. Статусы фото: `pending`, `ready`, `error`. [app.py: create_event, update_event, requeue, search, access_ticket](../app.py).
 
 Удаление сначала перемещает файлы в `.trash`, затем фиксирует SQLite, затем очищает staging. При ошибке транзакции файлы возвращаются. `recover_deletions` при штатном старте определяет по базе, восстанавливать файлы или завершать удаление. Очередь `pending` возобновляется. RLock координирует запись, выдачу и удаление; inference не удерживает её. [app.py: remove_storage, restore_staged, recover_deletions, index_photo, __main__](../app.py).
 

@@ -24,7 +24,7 @@
 
 Источник: [app.py: list_events, create_event, get_event, update_event, rotate_link, retry, delete_event](../app.py).
 
-`title` после trim - 1..120 символов, `description` - до 2000 символов. Лимит описания одинаков в UI и API. Максимум 30 съёмок. `status` - `draft | published | paused`, `detailed` - JSON boolean. Новая съёмка создаётся `draft`; публикация требует `ready > 0` и `pending == 0`, иначе `409`. Изменение `detailed` переиндексирует всю съёмку; retry ставит в очередь только `error`. [app.py: create_event, update_event, requeue](../app.py), [web/app.js: adminEvent](../web/app.js).
+`title` после trim - 1..120 символов, `description` - до 2000 символов. Лимит описания одинаков в UI и API. Максимум 30 съёмок. `status` - `draft | published | paused`, `detailed` - JSON boolean. Новая съёмка создаётся `draft`, с `detailed = true`; публикация требует `ready > 0` и `pending == 0`, иначе `409`. Изменение `detailed` переиндексирует всю съёмку; retry ставит в очередь только `error`. [app.py: create_event, update_event, requeue](../app.py), [web/app.js: adminEvent](../web/app.js).
 
 `GET` выбирает admin-ветку при наличии непустого `X-Admin-Key`: неверный admin key не откатывается к guest key. Guest получает заголовок съёмки и прогресс даже для draft/paused, но не список фото. [app.py: get_event](../app.py).
 

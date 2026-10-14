@@ -83,7 +83,7 @@ with db() as conn:
     ''')
     # Additive migration preserves every existing gallery and uploaded file.
     for table, additions in {
-        'events': {'description':"TEXT NOT NULL DEFAULT ''", 'status':"TEXT NOT NULL DEFAULT 'published'", 'detailed':'INTEGER NOT NULL DEFAULT 0', 'link_version':'INTEGER NOT NULL DEFAULT 0'},
+        'events': {'description':"TEXT NOT NULL DEFAULT ''", 'status':"TEXT NOT NULL DEFAULT 'published'", 'detailed':'INTEGER NOT NULL DEFAULT 1', 'link_version':'INTEGER NOT NULL DEFAULT 0'},
         'photos': {'width':'INTEGER DEFAULT 0','height':'INTEGER DEFAULT 0','warnings':"TEXT DEFAULT '[]'",'generation':'INTEGER NOT NULL DEFAULT 0','duration_ms':'INTEGER DEFAULT 0'},
     }.items():
         present={r['name'] for r in conn.execute(f'PRAGMA table_info({table})')}
@@ -311,7 +311,7 @@ def create_event():
         event_id = secrets.token_hex(12)
         guest_key = secrets.token_urlsafe(24)
         (DATA / event_id).mkdir()
-        conn.execute("INSERT INTO events(id,title,guest,created,description,status) VALUES (?,?,?,?,?,'draft')", (event_id, title.strip(), guest_key, time.time(),description.strip()))
+        conn.execute("INSERT INTO events(id,title,guest,created,description,status,detailed) VALUES (?,?,?,?,?,'draft',1)", (event_id, title.strip(), guest_key, time.time(),description.strip()))
     return jsonify(id=event_id), 201
 
 

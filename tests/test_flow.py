@@ -232,13 +232,14 @@ class Flow(unittest.TestCase):
 
     def test_05_retry_and_reindex(self):
         eid,guest=self.create('Reindex')
+        self.assertEqual(self.client.get('/api/events/'+eid,headers=self.admin).json['detailed'],1)
         photo_id=self.upload(eid,jpg(self.alpha)).json['id'];self.wait(eid)
         with module.lock,module.db() as conn:
             conn.execute("UPDATE photos SET status='error',error='simulated interrupted processing' WHERE id=?",(photo_id,))
         retried=self.client.post('/api/events/'+eid+'/retry',headers=self.admin)
         self.assertEqual(retried.json['queued'],1)
         self.assertEqual(self.wait(eid)['errors'],0)
-        response=self.client.patch('/api/events/'+eid,headers=self.admin,json={'detailed':True})
+        response=self.client.patch('/api/events/'+eid,headers=self.admin,json={'detailed':False})
         self.assertTrue(response.json['reindexed']);info=self.wait(eid)
         self.assertEqual(info['faces'],1)
         self.assertEqual(self.search(eid,guest,self.alpha).json['count'],1)
