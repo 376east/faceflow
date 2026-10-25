@@ -2,49 +2,57 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><a href="PLAN.md"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&message=%D0%B2%20%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&color=orange&labelColor=555&style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&message=Python%20%C2%B7%20Flask%20%C2%B7%20OpenCV&color=blue&labelColor=555&style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="https://github.com/malyarq/faceflow/blob/main/demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&message=MP4&color=blue&labelColor=555&style=flat" alt="Демо: MP4"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://img.shields.io/static/v1?label=%D0%9F%D0%BE%D0%BA%D1%80%D1%8B%D1%82%D0%B8%D0%B5&message=%D0%BE%D1%82%D1%87%D0%B5%D1%82%20CI&color=blue&labelColor=555&style=flat" alt="Покрытие: отчет CI"></a></p>
+<p><a href="#статус-и-ограничения"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&amp;message=%D0%B2+%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&amp;color=orange&amp;labelColor=555&amp;style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&amp;event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&amp;message=Python+%C2%B7+Flask+%C2%B7+OpenCV&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&amp;message=00%3A50&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Демо: 00:50"></a></p>
 
-**[Демо](https://github.com/malyarq/faceflow/blob/main/demo/product/faceflow-demo.mp4) · [Запуск](#запуск) · [Архитектура](#архитектура) · [План](PLAN.md) · [Разработка](#разработка)**
+**[Скриншоты](#как-выглядит) · [Возможности](#что-работает) · [Запуск](#запуск) · [Архитектура](#архитектура) · [Ограничения](#статус-и-ограничения) · [Разработка](#разработка)**
 
 ## Как выглядит
 
-Демо на фотографиях Wikimania 2019 показывает путь от загрузки съёмки до поиска по селфи и скачивания подборки. Ролик - 50 секунд, русские субтитры, без звука. [Авторы и лицензии снимков](demo/product/credits.md).
+<a href="docs/assets/readme/overview.svg"><img src="docs/assets/readme/overview.svg" alt="Обзор интерфейса FaceFlow" width="760"></a>
 
-**1. Открыть съёмку и добавить селфи**
+Поиск фотографий по селфи, выбор кадров и скачивание ZIP. В демо используются фотографии Wikimania 2019. [Авторы и лицензии](demo/product/credits.md).
 
-<img src="demo/product/frames/guest.png" alt="Гостевая страница: загрузка селфи, согласие и поиск своих фотографий" width="760">
+**[Демо MP4](demo/product/faceflow-demo.mp4)** · 00:50 · [Материалы демо](docs/DEMO.md)
 
-**2. Проверить результаты и выбрать кадры для ZIP**
+<details>
+<summary>Ещё два экрана</summary>
 
-<img src="demo/product/frames/selected.png" alt="Найдены три кадра, два выбраны для скачивания подборки" width="760">
+**Гостевая страница: загрузка селфи, согласие и поиск своих фотографий.**
 
-**3. Найти себя в кадре и рассмотреть фотографию**
+<a href="demo/product/frames/guest.png"><img src="docs/assets/readme/screen-2.svg" alt="Гостевая страница: загрузка селфи, согласие и поиск своих фотографий" width="760"></a>
 
-<img src="demo/product/frames/viewer.png" alt="Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра" width="760">
+**Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра.**
 
-Найденное лицо отмечено красной рамкой в подборке и при просмотре. JPEG и ZIP скачиваются без неё. [Как устроен поиск](docs/API.md#поиск).
+<a href="demo/product/frames/viewer.png"><img src="docs/assets/readme/screen-3.svg" alt="Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра" width="760"></a>
+
+</details>
 
 ## Что работает
 
-- Фотограф: создание съёмки, загрузка и индексация фотографий, публикация и пауза, смена гостевой ссылки, повтор обработки ошибок и удаление съёмки. [API](docs/API.md).
-- Гость: поиск по селфи с одним лицом, просмотр, скачивание JPEG или выбранных кадров в ZIP, отметка «Не я». [Клиент](web/app.js).
-- Локальное распознавание на CPU с YuNet/SFace и хранение в SQLite и JPEG. [Архитектура](docs/ARCHITECTURE.md).
+- **Основное:** создать съёмку, загрузить и проиндексировать фотографии, опубликовать или сменить гостевую ссылку, приостановить доступ. [API](docs/API.md).
+- **Дополнительно:** найти свои кадры по селфи, открыть фотографию, скачать JPEG или ZIP, отметить чужой результат; повторить обработку ошибок и удалить съёмку. [Клиент](web/app.js), [API](docs/API.md).
+- **Данные:** локальное распознавание на CPU с YuNet/SFace, индекс в SQLite и JPEG на диске. [Архитектура](docs/ARCHITECTURE.md).
 
 ## Запуск
 
+### Требования
+
 Нужен Python 3.12. Из корня проекта в PowerShell:
 
+### Быстрый старт
+
 ```powershell
+git clone https://github.com/malyarq/faceflow.git
+cd faceflow
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-.venv/Scripts/Activate.ps1
-python scripts/download_models.py
-python app.py --open
+.venv/Scripts/python.exe scripts/download_models.py
+.venv/Scripts/python.exe app.py --open
 ```
 
-Приложение открывается на `http://127.0.0.1:8765`. Полная ссылка фотографа содержит секретный ключ: не публикуйте её и вывод терминала. Сервер слушает только этот компьютер; гостевая ссылка сама по себе не делает галерею доступной через интернет. [Запуск и ключи](app.py).
+### Данные и доступ
 
-Если PowerShell запрещает активацию, выполняйте команды через `.venv/Scripts/python.exe`. Активация нужна только для сокращения команды `python`.
+Приложение открывается на `http://127.0.0.1:8765`. Полная ссылка фотографа содержит секретный ключ: не публикуйте её и вывод терминала. Сервер слушает только этот компьютер; гостевая ссылка сама по себе не делает галерею доступной через интернет. [Запуск и ключи](app.py).
 
 Для проверки без личных фотографий есть отдельный синтетический альбом. [Запуск демо](docs/DEMO.md#запуск), [актуальный ролик и материалы](demo/product/README.md).
 
@@ -65,7 +73,13 @@ flowchart LR
 
 ## Статус и ограничения
 
-Стадия - локальный MVP в разработке. Версия продукта в коде не задана; отдельного релиза нет. Текущее состояние и дальнейшие задачи: [PLAN.md](PLAN.md).
+| Параметр | Состояние |
+| --- | --- |
+| Стадия | В разработке. [План](PLAN.md). |
+| Версия | Не задана; отдельного релиза нет. [План](PLAN.md). |
+| Лицензия | Не выбрана для собственного кода. [Права на материалы](THIRD_PARTY.md). |
+
+### Ограничения
 
 YuNet и SFace - нейросетевые модели, работающие локально на CPU. Сопоставление векторов использует унаследованный порог `0.60`, проверки размера и размытия лица - эвристики. LLM и облачного inference в поиске нет. Веса закреплены по ревизии и SHA-256, скачиваются отдельно и не входят в Git. [Распознавание](recognition.py), [порог](evaluation/threshold.json), [manifest](models/manifest.json).
 
@@ -74,6 +88,11 @@ YuNet и SFace - нейросетевые модели, работающие л�
 Доступ основан на секретных ссылках, отдельного rate limiting нет, файлы на диске не шифруются приложением. Безопасность интернет-хостинга не проверена; приложение локально и в интернет не развёрнуто. [Доступ и ограничения](docs/ARCHITECTURE.md).
 
 ## Разработка
+
+[Документация](docs/ARCHITECTURE.md) · [План](PLAN.md) · [Правила](AGENTS.md) · [CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml)
+
+<details>
+<summary>Проверки и работа над проектом</summary>
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -94,3 +113,5 @@ python -m coverage html -d work/coverage/html
 Для работы и координации изменений: [AGENTS.md](AGENTS.md), [план](PLAN.md), [точки входа](docs/ARCHITECTURE.md), [контракт API](docs/API.md). Для воспроизведения скриншотов, озвучки и монтажа: [инструкции демо](docs/DEMO.md).
 
 Лицензия собственного кода не выбрана. У YuNet - MIT, у SFace - Apache 2.0; это не назначает лицензию проекту. [Права и сторонние материалы](THIRD_PARTY.md), [YuNet-LICENSE.txt](models/YuNet-LICENSE.txt), [SFace-LICENSE.txt](models/SFace-LICENSE.txt).
+
+</details>
