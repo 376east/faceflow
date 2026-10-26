@@ -40,6 +40,8 @@ total, ready, pending, errors, faces, no_faces: integer,
 views, searches, downloads, feedback: integer
 ```
 
+Список административных съёмок дополнительно содержит `cover: URL|null` - подписанную административную ссылку на первое готовое превью. Гостевой API обложку не отдаёт; при смене ссылки прежний ticket отзывается. [app.py: list_events](../app.py).
+
 `EventAdmin` - этот объект плюс `photos: [PhotoAdmin]`. `EventGuest` содержит только `id, title, description, status, total, ready, pending, errors`. `views` увеличивается при guest GET без cookie `ff_view_<event>`; cookie выставляется на сутки. [app.py: summary, get_event](../app.py).
 
 `PhotoAdmin`:
@@ -72,6 +74,8 @@ warnings: string[]; preview, download: relative URL
 ### Поиск
 
 Поиск доступен только в `published` съёмке, когда очередь пуста и есть готовые фотографии, иначе `409`. На селфи должно детектироваться ровно одно лицо; лицо с `small_face` отклоняется (`400`). `blurred_face` само по себе не является серверным запретом. [app.py: search](../app.py), [recognition.py: analyze](../recognition.py).
+
+`photos[].width` и `height` - размеры полного JPEG в пикселях. Клиент использует их как пропорции изображения до загрузки превью.
 
 `photos[].face_box` - `[x, y, width, height]` в долях размера полного JPEG (0..1), для лица с лучшим совпадением в кадре. `null` допустим, если координат ещё нет. Клиент показывает рамку поверх фото; скачиваемые JPEG и ZIP не изменяются. [app.py: index_photo, search, media, download](../app.py), [web/app.js: faceBoxStyle, photo, refreshViewer](../web/app.js).
 

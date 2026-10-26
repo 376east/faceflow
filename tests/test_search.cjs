@@ -43,6 +43,12 @@ test('API errors preserve HTTP status for client recovery',async()=>{
   vm.runInContext(api,ctx);
   await assert.rejects(vm.runInContext("api('/test')",ctx),e=>e.status===409&&e.message==='paused');
 });
+test('search failures describe recovery and preserve selfie for a network retry',async()=>{
+  for(const [status,expected] of [[400,/одним хорошо видимым лицом/],[413,/слишком большой/],[429,/Подождите/],[500,/Селфи осталось/],[undefined,/соединение/]]){
+    const ui=setup(async()=>{throw Object.assign(Error('failure'),{status});});await ui.submit();
+    assert.match(ui.q('#search-status').textContent,expected);assert.equal(ui.q('#selfie').files[0].name,'selfie');assert.equal(ui.q('#find').disabled,false);
+  }
+});
 
 
 test('face highlight uses normalized coordinates and never changes media URLs',()=>{
@@ -50,8 +56,8 @@ test('face highlight uses normalized coordinates and never changes media URLs',(
   const context=vm.createContext({esc:v=>String(v)});vm.runInContext(source.slice(start,end),context);
   assert.equal(context.faceBoxStyle([.1,.2,.3,.4]),'left:10%;top:20%;width:30%;height:40%;');
   for(const box of [null,[],[0,0,0,1],[0,0,2,1],[-.1,0,.2,.2],[0,0,NaN,1],['0',0,.1,.1]])assert.equal(context.faceBoxStyle(box),'');
-  const card=context.photo({id:'one',name:'Frame',preview:'/thumb.jpg',download:'/full.jpg?ticket=signed&download=1',face_box:[.1,.2,.3,.4]},false,true);
-  assert.match(card,/class="face-marker"/);assert.match(card,/left:10%;top:20%/);
+  const card=context.photo({id:'one',name:'Frame',preview:'/thumb.jpg',download:'/full.jpg?ticket=signed&download=1',face_box:[.1,.2,.3,.4],width:1024,height:600},false,true);
+  assert.match(card,/width="1024" height="600"/);assert.match(card,/class="face-marker"/);assert.match(card,/left:10%;top:20%/);
   assert.match(card,/data-download="\/full.jpg\?ticket=signed&download=1"/);
   assert.doesNotMatch(context.photo({id:'old',name:'Legacy',preview:'/thumb.jpg',face_box:null}),/class="face-marker"/);
 });

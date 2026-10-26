@@ -309,8 +309,16 @@ def assets(name):
 def list_events():
     admin()
     with db() as conn:
-        rows = conn.execute('SELECT * FROM events ORDER BY created DESC').fetchall()
-    return jsonify(events=[dict(row) | summary(row['id']) for row in rows], pid=os.getpid())
+        rows = conn.execute("""SELECT e.*,p.id cover_photo FROM events e
+            LEFT JOIN (SELECT event,MIN(rowid) first_ready FROM photos WHERE status='ready' GROUP BY event) c ON c.event=e.id
+            LEFT JOIN photos p ON p.rowid=c.first_ready ORDER BY e.created DESC""").fetchall()
+    events=[]
+    for row in rows:
+        item=dict(row)
+        cover_photo=item.pop('cover_photo')
+        item['cover']=photo_url(row['id'],cover_photo,thumb=True,admin_access=True,version=row['link_version']) if cover_photo else None
+        events.append(item | summary(row['id']))
+    return jsonify(events=events, pid=os.getpid())
 
 
 @app.post('/api/events')
@@ -482,6 +490,7 @@ def search(event_id):
                 score = float(np.dot(query, np.frombuffer(row['vector'], dtype=np.float32)))
                 if score >= THRESHOLD and (row['id'] not in best or score > best[row['id']]['score']):
                     best[row['id']] = {'id': row['id'], 'name': row['name'], 'score': score,
+                        'width': row['width'], 'height': row['height'],
                         'face_box': normalized_face_box(json.loads(row['box']) if row['box'] is not None else None, row['width'], row['height'])}
             matches = sorted(best.values(), key=lambda row: row['score'], reverse=True)
             ticket = make_ticket(event_id,[p['id'] for p in matches],version=current['link_version'])

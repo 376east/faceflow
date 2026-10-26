@@ -1,0 +1,15 @@
+{
+  "durationSec": 19.533333,
+  "sizeBytes": 734015,
+  "codec": "h264",
+  "width": 1920,
+  "height": 1080,
+  "fps": "30/1",
+  "audio": "none",
+  "source_date": "2026-10-26",
+  "code_commit": "2b50feb58ae14ba61875f23e29cd6942f9ceeb71",
+  "file": "current-flow.mp4",
+  "sha256": "4aa4a497c5f13b3a6d64858f604dd99aa4662e7b691b244d2501d3e657473e77",
+  "method": "Real interface screenshots and timestamped UI capture sequence; synthetic demo data; no interpolated frames.",
+  "limitation": "Local synthetic demo; not a production deployment."
+}

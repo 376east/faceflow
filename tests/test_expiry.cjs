@@ -6,7 +6,7 @@ const source=require('node:fs').readFileSync(require('node:path').join(__dirname
 const code=source.slice(source.indexOf('function results('),source.indexOf("q('#close-viewer').onclick="));
 const viewerCode=source.slice(source.indexOf('function setFaceMarker('),source.indexOf('function wireModal('));
 function setup(apiResponse){
-  let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0,refreshed=0;
+  let clock=100000,counter=0,closed=0,submitted=0,apiCalls=0,refreshed=0,zoomClosed=0;
   const timers=new Map(),nodes=new Map();
   const node=()=>({disabled:false,hidden:false,checked:false,dataset:{},style:{removeProperty(){},setProperty(){}},handlers:{},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},before(){},addEventListener(name,fn){this.handlers[name]=fn;}});
   const q=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
@@ -17,12 +17,12 @@ function setup(apiResponse){
   const qa=selector=>selector==='.photo'||selector==='[data-photo]'?[card]:selector==='[data-select]:checked'?(check.checked?[check]:[]):selector==='[data-select]'?[check]:selector==='[data-feedback]'?[feedback]:selector==='.photo-open, [data-select], [data-feedback]'?[open,check,feedback]:[];
   class Clock extends Date{static now(){return clock;}}
   q('#search').requestSubmit=()=>submitted++;
-  const context=vm.createContext({q,qa,Date:Clock,document:{createElement:node},photo:()=>'',wireModal(){},eventId:'event',modalPhoto:'one',ticket:'test',feedbackHandler:null,resultTimer:null,viewer:{open:true,close(){closed++;this.open=false;}},api:async()=>{apiCalls++;if(apiResponse)await apiResponse();},refreshViewer(){refreshed++;},stat:(id,msg)=>q('#'+id).textContent=msg,setTimeout:fn=>{const id=++counter;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
+  const context=vm.createContext({window:{FaceFlowGallery:{mount(){},closeZoom(){zoomClosed++;}}},q,qa,Date:Clock,document:{createElement:node},photo:()=>'',wireModal(){},eventId:'event',modalPhoto:'one',ticket:'test',feedbackHandler:null,resultTimer:null,viewer:{open:true,close(){closed++;this.open=false;}},api:async()=>{apiCalls++;if(apiResponse)await apiResponse();},refreshViewer(){refreshed++;},stat:(id,msg)=>q('#'+id).textContent=msg,setTimeout:fn=>{const id=++counter;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
   context.viewerItems=[card];context.viewerIndex=0;
   vm.runInContext(viewerCode+code,context);
   const refresh=context.refreshViewer;context.refreshViewer=()=>{refreshed++;refresh();};
   const show=()=>{nodes.set('#result-gallery',node());context.ticket='fresh';context.results({zip:'/zip?ticket=test',ticket:'test',expires_in:20},[{id:'one'}]);};
-  return {q,show,timers,view:id=>{context.modalPhoto=id;context.viewer.open=true;},close:()=>context.viewer.open=false,refreshed:()=>refreshed,ticket:()=>context.ticket,closed:()=>closed,submitted:()=>submitted,apiCalls:()=>apiCalls,advance:ms=>clock+=ms};
+  return {q,show,timers,view:id=>{context.modalPhoto=id;context.viewer.open=true;},close:()=>context.viewer.open=false,refreshed:()=>refreshed,ticket:()=>context.ticket,closed:()=>closed,zoomClosed:()=>zoomClosed,submitted:()=>submitted,apiCalls:()=>apiCalls,advance:ms=>clock+=ms};
 }
 test('expiry hides ZIP, disables old result actions and closes viewer; renewal submits existing form',()=>{
   const ui=setup();ui.show();assert.equal(ui.q('#zip').hidden,false);
@@ -30,7 +30,7 @@ test('expiry hides ZIP, disables old result actions and closes viewer; renewal s
   assert.equal(ui.q('#zip').hidden,true);assert.equal(ui.q('#zip').href,undefined);
   assert.equal(ui.q('.photo-open').disabled,true);
   assert.equal(ui.q('[data-select]').disabled,true);
-  assert.equal(ui.closed(),1);
+  assert.equal(ui.closed(),1);assert.equal(ui.zoomClosed(),1);
   assert.match(ui.q('#result-expiry-status').textContent,/Срок ссылок истёк/);
   ui.q('#renew-results').onclick();assert.equal(ui.submitted(),1);
   assert.equal(ui.q('#search-details').open,true);
@@ -121,7 +121,7 @@ test('viewer feedback failure checks expiry without waiting for the timer',async
   const pending=ui.q('#not-me').onclick();ui.advance(20001);
   reject(new Error('Expired failure'));await pending;
   assert.equal(ui.q('#zip').hidden,true);
-  assert.equal(ui.closed(),1);
+  assert.equal(ui.closed(),1);assert.equal(ui.zoomClosed(),1);
   assert.notEqual(ui.q('#viewer-status').textContent,'Expired failure');
 });
 

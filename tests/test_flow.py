@@ -112,6 +112,7 @@ class Flow(unittest.TestCase):
         self.assertEqual(files_before,files_after)
         self.assertEqual([p['id'] for p in result.json['photos']],[group_id])
         photo=result.json['photos'][0]
+        self.assertEqual((photo['width'],photo['height']),(1024,600))
         x,y,w,h=photo['face_box']
         self.assertLess(x+w/2,.5)
         self.assertTrue(all(0<=value<=1 for value in (x,y,w,h)))
@@ -128,6 +129,8 @@ class Flow(unittest.TestCase):
             self.assertEqual(zipped.read(zipped.namelist()[0]),clean_group)
         beta_result=self.search(eid,guest,self.beta);self.assertEqual(beta_result.status_code,200)
         beta_group=next(item for item in beta_result.json['photos'] if item['id']==group_id)
+        beta_portrait=next(item for item in beta_result.json['photos'] if item['name']=='person-b.jpg')
+        self.assertEqual((beta_portrait['width'],beta_portrait['height']),(512,512))
         bx,by,bw,bh=beta_group['face_box']
         self.assertGreater(bx+bw/2,.5)
         self.assertNotEqual(photo['face_box'],beta_group['face_box'])
@@ -159,6 +162,43 @@ class Flow(unittest.TestCase):
         self.assertEqual(self.client.get('/api/events/'+other,headers=other_guest).status_code,200)
         self.assertFalse((module.DATA/eid).exists())
         self.assertEqual(self.client.delete('/api/events/'+other,headers=self.admin).status_code,200)
+
+    def test_admin_album_covers(self):
+        eid,guest=self.create('Album cover')
+        def listed():
+            response=self.client.get('/api/events',headers=self.admin)
+            self.assertEqual(response.status_code,200)
+            return next(item for item in response.json['events'] if item['id']==eid)
+        self.assertIsNone(listed()['cover'])
+        self.assertEqual(self.client.get('/api/events').status_code,403)
+        self.assertEqual(self.client.get('/api/events',headers=guest).status_code,403)
+        first=self.upload(eid,jpg(self.alpha),'first.jpg').json['id']
+        second=self.upload(eid,jpg(self.beta),'second.jpg').json['id']
+        self.wait(eid)
+        cover=listed()['cover']
+        self.assertIn('/'+first+'?',cover)
+        self.assertIn('&thumb=1',cover)
+        thumbnail=(module.DATA/eid/(first+'-thumb.jpg')).read_bytes()
+        response=self.client.get(cover)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.mimetype,'image/jpeg')
+        self.assertEqual(response.data,thumbnail)
+        with module.db() as conn:
+            conn.execute("UPDATE photos SET status='error' WHERE id=?",(first,))
+        self.assertIn('/'+second+'?',listed()['cover'])
+        with module.db() as conn:
+            conn.execute("UPDATE photos SET status='ready' WHERE id=?",(first,))
+        self.assertEqual(self.client.patch('/api/events/'+eid,headers=self.admin,json={'status':'paused'}).status_code,200)
+        self.assertEqual(self.client.get(listed()['cover']).data,thumbnail)
+        rotated=self.client.post('/api/events/'+eid+'/rotate-link',headers=self.admin)
+        self.assertEqual(rotated.status_code,200)
+        self.assertEqual(self.client.get(cover).status_code,403)
+        fresh=self.client.get(listed()['cover'])
+        self.assertEqual(fresh.status_code,200)
+        self.assertEqual(fresh.data,thumbnail)
+        current_guest={'X-Guest-Key':rotated.json['guest']}
+        self.assertNotIn('cover',self.client.get('/api/events/'+eid,headers=current_guest).json)
+        self.assertEqual(self.client.delete('/api/events/'+eid,headers=self.admin).status_code,200)
 
     def test_02_input_validation_and_consent(self):
         context=module.app.test_request_context('/upload', method='POST', data={'selfie':(io.BytesIO(b'x'*800_000),'large.jpg')})

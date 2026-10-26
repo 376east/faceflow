@@ -1,0 +1,5 @@
+GSAP 3.15.0 - Copyright 2026 GreenSock. All rights reserved.
+Distributed unchanged from the pinned npm package gsap@3.15.0.
+Standard no-charge license: https://gsap.com/standard-license.
+Official commercial-use announcement: https://gsap.com/blog/3-13/
+The copyright/license header is preserved in gsap.min.js.

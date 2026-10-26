@@ -2,28 +2,34 @@
 
 Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
 
-<p><a href="#статус-и-ограничения"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&amp;message=%D0%B2+%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&amp;color=orange&amp;labelColor=555&amp;style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&amp;event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&amp;message=Python+%C2%B7+Flask+%C2%B7+OpenCV&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="demo/product/faceflow-demo.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&amp;message=00%3A50&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Демо: 00:50"></a></p>
+<p><a href="#статус-и-ограничения"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&amp;message=%D0%B2+%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&amp;color=orange&amp;labelColor=555&amp;style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&amp;event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&amp;message=Python+%C2%B7+Flask+%C2%B7+OpenCV&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="docs/assets/readme/current-flow.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&amp;message=00%3A20&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Демо: 00:20"></a></p>
 
 **[Скриншоты](#как-выглядит) · [Возможности](#что-работает) · [Запуск](#запуск) · [Архитектура](#архитектура) · [Ограничения](#статус-и-ограничения) · [Разработка](#разработка)**
 
 ## Как выглядит
 
-<a href="docs/assets/readme/overview.svg"><img src="docs/assets/readme/overview.svg" alt="Обзор интерфейса FaceFlow" width="760"></a>
+Интерфейс использует фотоальбом с обложками съёмок, локальными шрифтами и сдержанными переходами. [Дизайн и выбор инструментов](docs/DESIGN.md).
 
-Поиск фотографий по селфи, выбор кадров и скачивание ZIP. В демо используются фотографии Wikimania 2019. [Авторы и лицензии](demo/product/credits.md).
+<a href="docs/assets/readme/overview.svg"><img src="docs/assets/readme/overview.svg" alt="Световой стол и выбор фотографий" width="760"></a>
 
-**[Демо MP4](demo/product/faceflow-demo.mp4)** · 00:50 · [Материалы демо](docs/DEMO.md)
+Световой стол, галерея и управление выбранными фотографиями на компьютере и телефоне. На снимках отдельная синтетическая съёмка; поиск и скачивание проходят через локальный backend. [Источник снимков](docs/assets/readme/prototype-transfer.json).
+
+В предыдущем ролике используются фотографии Wikimania 2019. [Авторы и лицензии](demo/product/credits.md).
+
+**[Актуальное демо MP4](docs/assets/readme/current-flow.mp4)** · 00:20 · 26 октября 2026 · [Источник записи](docs/assets/readme/current-flow.json)
+
+[Предыдущее демо, 00:50](demo/product/faceflow-demo.mp4) · [Материалы демо](docs/DEMO.md)
 
 <details>
 <summary>Ещё два экрана</summary>
 
-**Гостевая страница: загрузка селфи, согласие и поиск своих фотографий.**
+**Галерея и управление выбором.**
 
-<a href="demo/product/frames/guest.png"><img src="docs/assets/readme/screen-2.svg" alt="Гостевая страница: загрузка селфи, согласие и поиск своих фотографий" width="760"></a>
+<a href="docs/assets/readme/screen-2.svg"><img src="docs/assets/readme/screen-2.svg" alt="Галерея и управление выбором" width="760"></a>
 
-**Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра.**
+**Подборка на телефоне.**
 
-<a href="demo/product/frames/viewer.png"><img src="docs/assets/readme/screen-3.svg" alt="Просмотр фотографии: навигация, выбор, скачивание и отметка чужого кадра" width="760"></a>
+<a href="docs/assets/readme/screen-3.svg"><img src="docs/assets/readme/screen-3.svg" alt="Подборка на телефоне" width="760"></a>
 
 </details>
 
@@ -54,7 +60,7 @@ python -m venv .venv
 
 Приложение открывается на `http://127.0.0.1:8765`. Полная ссылка фотографа содержит секретный ключ: не публикуйте её и вывод терминала. Сервер слушает только этот компьютер; гостевая ссылка сама по себе не делает галерею доступной через интернет. [Запуск и ключи](app.py).
 
-Для проверки без личных фотографий есть отдельный синтетический альбом. [Запуск демо](docs/DEMO.md#запуск), [актуальный ролик и материалы](demo/product/README.md).
+Для проверки без личных фотографий есть отдельный синтетический альбом. [Запуск демо](docs/DEMO.md#запуск), [предыдущий ролик и материалы](demo/product/README.md).
 
 ## Архитектура
 
