@@ -52,3 +52,12 @@ test('active upload ignores drops and duplicate clicks; a new selection clears o
   assert.equal(ui.q('#upload-status').textContent,'');
   assert.equal(ui.q('#upload').textContent,'Загрузить');
 });
+test('lost acknowledgement is retried once and reported as already accepted',async()=>{
+  let calls=0;
+  const ui=setup(async()=>{if(++calls===1)throw Error('response lost');return {duplicate:true};});
+  ui.choose([{name:'accepted.jpg'}]);await ui.q('#upload').onclick();
+  assert.equal(ui.q('#photos').files.length,1);
+  await ui.q('#upload').onclick();
+  assert.equal(calls,2);assert.equal(ui.q('#photos').files.length,0);
+  assert.match(ui.q('#upload-status').textContent,/Добавлено: 0\. Уже в галерее: 1/);
+});

@@ -50,5 +50,5 @@
   image.addEventListener('load',imageChanged);image.addEventListener('error',imageChanged);imageChanged();
   viewer.querySelector('.viewer-nav').after(button);
   window.addEventListener('pagehide',closeZoom);
-  window.FaceFlowGallery={mount,closeZoom,imageChanged};
+  window.FaceFlowGallery={mount,closeZoom,imageChanged,isZoomOpen:()=>!!zoom};
 })();

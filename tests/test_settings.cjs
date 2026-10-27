@@ -30,10 +30,10 @@ function sharingUI({fail=false,confirm=true}={}){
   Object.defineProperty(q('#sharing'),'innerHTML',{set(){['#toggle','#rotate','#copy'].forEach(id=>q(id).disabled=false);}});
   let release;
   const waiting=new Promise(resolve=>release=resolve);
-  const context=vm.createContext({q,qa:()=>['#toggle','#rotate','#copy'].map(q),id:'event',event:{status:'published',guest:'old',ready:1},esc:String,badge:()=>'',guestLink:()=>'',confirmAction:async()=>confirm,stat:(...args)=>messages.push(args),api:async(path)=>{requests.push(path);await waiting;if(fail)throw Error('Connection lost');return {guest:'new'};},refresh:async()=>{}});
+  const context=vm.createContext({q,qa:()=>['#toggle','#rotate','#copy'].map(q),id:'event',uploading:false,event:{status:'published',guest:'old',ready:1},esc:String,badge:()=>'',guestLink:()=>'',confirmAction:async()=>confirm,stat:(...args)=>messages.push(args),api:async(path)=>{requests.push(path);await waiting;if(fail)throw Error('Connection lost');return {guest:'new'};},refresh:async()=>{}});
   const start=source.indexOf('let sharingBusy=');
   const shareStart=start<0?source.indexOf('function share(e)'):start;
-  vm.runInContext(source.slice(shareStart,source.indexOf('async function refresh()',shareStart))+';share(event);',context);
+  vm.runInContext(source.slice(shareStart,source.indexOf('const galleryNode=',shareStart))+';share(event);',context);
   return {q,requests,messages,release,context,leave:()=>nodes.delete('#sharing')};
 }
 test('sharing mutation blocks duplicate clicks and competing actions until response',async()=>{

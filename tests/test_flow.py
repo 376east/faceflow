@@ -314,6 +314,38 @@ class Flow(unittest.TestCase):
         self.assertEqual(self.search(eid,guest,self.alpha).json['count'],1)
         self.client.delete('/api/events/'+eid,headers=self.admin)
 
+    def test_retry_after_lost_upload_ack_preserves_accepted_photo(self):
+        eid, _ = self.create('Lost upload acknowledgement')
+        raw = jpg(self.alpha)
+        first = self.upload(eid, raw, 'accepted.jpg').json
+        # The browser may lose the response after the server committed the file.
+        repeated = self.upload(eid, raw, 'selected-again.jpg')
+        self.assertEqual(repeated.status_code, 200)
+        self.assertTrue(repeated.json['duplicate'])
+        self.assertEqual(repeated.json['id'], first['id'])
+        info = self.wait(eid)
+        clean = (module.DATA/eid/(first['id']+'.jpg')).read_bytes()
+        self.assertEqual(info['total'], 1)
+        self.assertEqual(self.client.post('/api/events/'+eid+'/retry',headers=self.admin).json['queued'], 0)
+        self.assertEqual((module.DATA/eid/(first['id']+'.jpg')).read_bytes(), clean)
+        self.assertEqual(self.client.get('/api/events/'+eid,headers=self.admin).json['ready'], 1)
+
+    def test_inference_failure_retries_only_failed_photo(self):
+        eid, _ = self.create('Processing recovery')
+        ready = self.upload(eid, jpg(self.alpha), 'ready.jpg').json['id']
+        self.wait(eid)
+        clean = (module.DATA/eid/(ready+'.jpg')).read_bytes()
+        with patch.object(module.pool, 'submit'):
+            failed = self.upload(eid, jpg(self.beta), 'failed.jpg').json['id']
+        with patch.object(module, 'analyze', side_effect=RuntimeError('controlled inference failure')):
+            with self.assertLogs(level='ERROR'):
+                module.index_photo(failed)
+        info = self.client.get('/api/events/'+eid,headers=self.admin).json
+        self.assertEqual((info['total'], info['ready'], info['errors']), (2, 1, 1))
+        self.assertEqual(self.client.post('/api/events/'+eid+'/retry',headers=self.admin).json['queued'], 1)
+        self.assertEqual(self.wait(eid)['ready'], 2)
+        self.assertEqual((module.DATA/eid/(ready+'.jpg')).read_bytes(), clean)
+
     def test_06_invalid_json_and_scope(self):
         self.assertEqual(self.client.post('/api/events',headers=self.admin,json=['invalid']).status_code,400)
         eid,guest=self.create('Validation');other,_=self.create('Other')
