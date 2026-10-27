@@ -95,7 +95,7 @@ YuNet и SFace - нейросетевые модели, работающие л�
 
 ## Разработка
 
-[Документация](docs/ARCHITECTURE.md) · [План](PLAN.md) · [Правила](AGENTS.md) · [CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml)
+[Документация](docs/ARCHITECTURE.md) · [Браузерные проверки](docs/BROWSER_CHECKS.md) · [План](PLAN.md) · [Правила](AGENTS.md) · [CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml)
 
 <details>
 <summary>Проверки и работа над проектом</summary>

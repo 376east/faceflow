@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "vendor": "node scripts/vendor-ui.cjs",
-    "test:ui": "node --test tests/test_*.cjs"
+    "test:ui": "node --test tests/test_*.cjs",
+    "test:browser": "node scripts/check_browser.cjs",
+    "browser:install": "python scripts/install_test_browser.py"
   },
   "dependencies": {
     "gsap": "3.15.0",
@@ -11,6 +13,7 @@
   },
   "devDependencies": {
     "@fontsource-variable/literata": "5.3.0",
-    "@fontsource-variable/manrope": "5.3.0"
+    "@fontsource-variable/manrope": "5.3.0",
+    "playwright": "1.62.1"
   }
 }

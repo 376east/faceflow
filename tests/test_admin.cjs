@@ -39,3 +39,15 @@ test('closing viewer focuses the visible frame, falls back for a hidden frame, a
   handler();assert.equal(focused,'photo');card.hidden=true;handler();assert.equal(focused,'results');
   focused='zoom';zoom=true;handler();assert.equal(focused,'zoom');
 });
+test('viewer Tab and Shift+Tab wrap only at visible control boundaries',()=>{
+  let handler,prevented=false;
+  const document={activeElement:null};
+  const control=visible=>({getClientRects:()=>visible?[{}]:[],focus(){document.activeElement=this;}});
+  const first=control(true),middle=control(true),last=control(true),hidden=control(false);
+  const start=source.indexOf("viewer.addEventListener('keydown'");
+  vm.runInNewContext(source.slice(start,source.indexOf("q('#viewer-check').onchange",start)),{document,viewer:{addEventListener:(type,fn)=>handler=fn},qa:()=>[first,middle,last,hidden]});
+  const tab=shiftKey=>{prevented=false;handler({key:'Tab',shiftKey,preventDefault(){prevented=true;}});};
+  document.activeElement=last;tab(false);assert.equal(document.activeElement,first);assert(prevented);
+  document.activeElement=first;tab(true);assert.equal(document.activeElement,last);assert(prevented);
+  document.activeElement=middle;tab(false);assert.equal(document.activeElement,middle);assert.equal(prevented,false);
+});

@@ -63,7 +63,16 @@ viewer.addEventListener('close',()=>{
 });
 q('#viewer-prev').onclick=()=>{if(viewerIndex>0){viewerIndex--;refreshViewer();}};
 q('#viewer-next').onclick=()=>{if(viewerIndex<viewerItems.length-1){viewerIndex++;refreshViewer();}};
-viewer.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();q('#viewer-prev').click();}if(e.key==='ArrowRight'){e.preventDefault();q('#viewer-next').click();}});
+viewer.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){e.preventDefault();q('#viewer-prev').click();}
+  if(e.key==='ArrowRight'){e.preventDefault();q('#viewer-next').click();}
+  if(e.key==='Tab'){
+    const controls=qa('button:not([disabled]), a[href], input:not([disabled])',viewer).filter(el=>el.getClientRects().length);
+    if(document.activeElement===(e.shiftKey?controls[0]:controls.at(-1))){
+      e.preventDefault();(e.shiftKey?controls.at(-1):controls[0]).focus();
+    }
+  }
+});
 q('#viewer-check').onchange=e=>{const select=q('[data-select]',viewerItems[viewerIndex]);if(select&&!select.disabled){select.checked=e.target.checked;select.dispatchEvent(new Event('change'));}};
 function faceBoxStyle(box){
   if(!Array.isArray(box)||box.length!==4||!box.every(Number.isFinite))return '';
