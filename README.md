@@ -1,8 +1,10 @@
 # FaceFlow
 
-Локальная фотогалерея: участник находит свои кадры по селфи и скачивает подборку.
+Фотограф открывает гостевую галерею, участник делает селфи и скачивает свои кадры. Поиск по фотографиям выполняется на компьютере фотографа.
 
-<p><a href="#статус-и-ограничения"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&amp;message=%D0%B2+%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&amp;color=orange&amp;labelColor=555&amp;style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/malyarq/faceflow/actions/workflows/ci.yml"><img src="https://github.com/malyarq/faceflow/actions/workflows/ci.yml/badge.svg?branch=main&amp;event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&amp;message=Python+%C2%B7+Flask+%C2%B7+OpenCV&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="docs/assets/readme/current-flow.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&amp;message=00%3A20&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Демо: 00:20"></a></p>
+**[Запустить FaceFlow локально](#запуск)** · [Смотреть демо · 20 с](docs/assets/readme/current-flow.mp4)
+
+<p><a href="#статус-и-ограничения"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B0%D1%82%D1%83%D1%81&amp;message=%D0%B2+%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B5&amp;color=orange&amp;labelColor=555&amp;style=flat" alt="Статус: в разработке"></a> <a href="https://github.com/376east/faceflow/actions/workflows/ci.yml"><img src="https://github.com/376east/faceflow/actions/workflows/ci.yml/badge.svg?branch=master&amp;event=push" alt="CI"></a> <a href="requirements.txt"><img src="https://img.shields.io/static/v1?label=%D0%A1%D1%82%D0%B5%D0%BA&amp;message=Python+%C2%B7+Flask+%C2%B7+OpenCV&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Стек: Python · Flask · OpenCV"></a> <a href="docs/assets/readme/current-flow.mp4"><img src="https://img.shields.io/static/v1?label=%D0%94%D0%B5%D0%BC%D0%BE&amp;message=00%3A20&amp;color=blue&amp;labelColor=555&amp;style=flat" alt="Демо: 00:20"></a></p>
 
 **[Скриншоты](#как-выглядит) · [Возможности](#что-работает) · [Запуск](#запуск) · [Архитектура](#архитектура) · [Ограничения](#статус-и-ограничения) · [Разработка](#разработка)**
 
@@ -48,7 +50,7 @@
 ### Быстрый старт
 
 ```powershell
-git clone https://github.com/malyarq/faceflow.git
+git clone https://github.com/376east/faceflow.git
 cd faceflow
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
@@ -95,7 +97,7 @@ YuNet и SFace - нейросетевые модели, работающие л�
 
 ## Разработка
 
-[Документация](docs/ARCHITECTURE.md) · [Браузерные проверки](docs/BROWSER_CHECKS.md) · [План](PLAN.md) · [Правила](AGENTS.md) · [CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml)
+[Документация](docs/ARCHITECTURE.md) · [Браузерные проверки](docs/BROWSER_CHECKS.md) · [План](PLAN.md) · [Правила](AGENTS.md) · [CI](https://github.com/376east/faceflow/actions/workflows/ci.yml)
 
 <details>
 <summary>Проверки и работа над проектом</summary>
@@ -105,7 +107,7 @@ python -m unittest discover -s tests -v
 node --test tests/test_upload.cjs tests/test_settings.cjs tests/test_readiness.cjs tests/test_search.cjs tests/test_expiry.cjs
 ```
 
-[CI](https://github.com/malyarq/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. Отчёт покрытия строк и ветвей `app.py` и `recognition.py` доступен в логах и сводке каждого прогона; это покрытие кода, не точность распознавания. CI запускается на push в `main`, pull request и вручную. Для скачивания HTML и JSON при ручном запуске включите `upload_coverage`: архив `coverage-report` хранится семь дней. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).
+[CI](https://github.com/376east/faceflow/actions/workflows/ci.yml) проверяет синтаксис Python/JavaScript и запускает [интеграционные тесты](tests/test_flow.py) на Windows с Python 3.12 и настоящими YuNet/SFace. Только синтетические исходники и временное хранилище. Отчёт покрытия строк и ветвей `app.py` и `recognition.py` доступен в логах и сводке каждого прогона; это покрытие кода, не точность распознавания. CI запускается на push в `master`, pull request и вручную. Для скачивания HTML и JSON при ручном запуске включите `upload_coverage`: архив `coverage-report` хранится семь дней. [Workflow](.github/workflows/ci.yml), [настройки покрытия](.coveragerc), [проверенный прогон и ограничения](docs/VERIFICATION.md).
 
 Чтобы измерить покрытие локально:
 
@@ -119,5 +121,7 @@ python -m coverage html -d work/coverage/html
 Для работы и координации изменений: [AGENTS.md](AGENTS.md), [план](PLAN.md), [точки входа](docs/ARCHITECTURE.md), [контракт API](docs/API.md). Для воспроизведения скриншотов, озвучки и монтажа: [инструкции демо](docs/DEMO.md).
 
 Лицензия собственного кода не выбрана. У YuNet - MIT, у SFace - Apache 2.0; это не назначает лицензию проекту. [Права и сторонние материалы](THIRD_PARTY.md), [YuNet-LICENSE.txt](models/YuNet-LICENSE.txt), [SFace-LICENSE.txt](models/SFace-LICENSE.txt).
+
+Проект [37.6 East](https://github.com/376east).
 
 </details>
