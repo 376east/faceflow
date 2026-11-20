@@ -9,7 +9,7 @@ import time
 from PIL import Image, ImageEnhance
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURES = ROOT / 'demo/synthetic'
+FIXTURES = ROOT / 'tests/fixtures'
 
 
 def jpg(image):
@@ -111,7 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--empty', action='store_true', help='Create a draft session without uploading photos')
     parser.add_argument('--timeout', type=float, default=300, help='Indexing deadline in seconds')
-    parser.add_argument('--dataset', type=Path, help='Dataset directory (default: demo/synthetic)')
+    parser.add_argument('--dataset', type=Path, help='Dataset directory (default: tests/fixtures)')
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error('--timeout must be positive')

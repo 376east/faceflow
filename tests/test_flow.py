@@ -15,7 +15,7 @@ from PIL import Image, ImageEnhance
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-FIXTURES = Path(os.environ.get('FACEFLOW_FIXTURES', str(ROOT / 'demo' / 'synthetic')))
+FIXTURES = Path(os.environ.get('FACEFLOW_FIXTURES', str(ROOT / 'tests' / 'fixtures')))
 temporary = tempfile.TemporaryDirectory(prefix='faceflow-check-')
 os.environ['FACEFLOW_DATA'] = temporary.name
 spec = importlib.util.spec_from_file_location('faceflow_test_app', ROOT / 'app.py')

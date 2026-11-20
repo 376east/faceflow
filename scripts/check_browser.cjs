@@ -57,7 +57,7 @@ async function main(){
     await admin.goto(base+'/#admin='+config.admin);
     await admin.getByRole('textbox',{name:'Название',exact:true}).fill('Синтетическая проверка интерфейса');
     await admin.getByRole('checkbox').check();await admin.getByRole('button',{name:'Создать съёмку',exact:true}).click();
-    await admin.locator('#photos').setInputFiles([path.join(ROOT,'demo/synthetic/person-a.png'),path.join(ROOT,'demo/synthetic/person-b.png')]);
+    await admin.locator('#photos').setInputFiles([path.join(ROOT,'tests/fixtures/person-a.png'),path.join(ROOT,'tests/fixtures/person-b.png')]);
     await admin.getByRole('button',{name:'Загрузить',exact:true}).click();
     await admin.getByRole('button',{name:'Опубликовать',exact:true}).waitFor();
     await waitFor(()=>admin.getByRole('button',{name:'Опубликовать',exact:true}).isEnabled());
@@ -92,7 +92,7 @@ async function main(){
       if(mode.zoom===2){assert(Math.abs(state.dpr/before.dpr-2)<.05);assert.equal(state.visualScale,1);}
       // Observe real style changes only. No product function, media result or CSS is replaced.
       await page.evaluate(()=>{window.__qaMotion=[];const observer=new MutationObserver(records=>{for(const record of records){const el=record.target;if(el.id==='result-gallery'||el.id==='viewer'){const s=getComputedStyle(el);window.__qaMotion.push({opacity:s.opacity,transform:s.transform});}}});observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['style']});});
-      await page.locator('#selfie').setInputFiles(path.join(ROOT,'demo/synthetic/person-a.png'));
+      await page.locator('#selfie').setInputFiles(path.join(ROOT,'tests/fixtures/person-a.png'));
       await page.getByRole('checkbox').check();await actionVisible(page,'#find');await page.getByRole('button',{name:'Найти мои фото',exact:true}).click();
       await imagesReady(page,'#result-gallery img');
       assert.equal(await page.locator('#result-gallery .photo').count(),1);

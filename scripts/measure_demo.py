@@ -134,7 +134,7 @@ def measure(data_path, port, timeout, repeats):
             'dataset': {'source': 'bundled synthetic manifest-v2', 'photos': len(dataset['photos']),
                 'selfies': len(dataset['selfies']), 'photo_input_bytes': sum(len(p['raw']) for p in dataset['photos']),
                 'selfie_input_bytes': sum(map(len, dataset['selfies'].values())),
-                'manifest_sha256': hashlib.sha256((ROOT/'demo/synthetic/event-manifest.json').read_bytes()).hexdigest()},
+                'manifest_sha256': hashlib.sha256((ROOT/'tests/fixtures/event-manifest.json').read_bytes()).hexdigest()},
             'human_accuracy': 'NOT_ASSESSED', 'setup': elapsed(setup)}
         admin = {'X-Admin-Key': module.CONFIG['admin']}
         started = snapshot()

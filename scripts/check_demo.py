@@ -122,7 +122,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeout', type=float, default=300)
     parser.add_argument('--report', type=Path, default=ROOT / 'work/demo-assessment.json')
-    parser.add_argument('--dataset', type=Path, help='Dataset directory (default: demo/synthetic)')
+    parser.add_argument('--dataset', type=Path, help='Dataset directory (default: tests/fixtures)')
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error('--timeout must be positive')
