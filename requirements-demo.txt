@@ -1,2 +1,0 @@
-# Optional regeneration of narration. Not needed by FaceFlow or the renderer.
-edge-tts==7.2.8

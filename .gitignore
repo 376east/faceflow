@@ -9,11 +9,6 @@ work/
 models/*.onnx
 *.sqlite*
 *.log
-demo/voice/
-demo/.hyperframes/
-demo/renders/
-demo/.thumbnails/
-demo/video/.hyperframes/
 .DS_Store
 
 node_modules/
