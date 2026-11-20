@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Verify the source bundle on Windows
+    if: github.event_name == 'workflow_dispatch' || github.event.created
+    runs-on: windows-latest
+    timeout-minutes: 20
+    outputs:
+      tag-object: ${{ steps.package.outputs.tag-object }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Build, extract, install and launch
+        id: package
+        run: |
+          $releaseArgs = @('--output', (Join-Path $env:RUNNER_TEMP 'faceflow-assets'))
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $releaseArgs += @('--tag', $env:GITHUB_REF_NAME)
+            $tagObject = git rev-parse $env:GITHUB_REF
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $eventCommit = git rev-parse "$($env:GITHUB_SHA)^{commit}"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $head = git rev-parse HEAD
+            if ($LASTEXITCODE -ne 0 -or $eventCommit -ne $head) {
+              throw 'The checked-out commit differs from the tag event.'
+            }
+            "tag-object=$tagObject" >> $env:GITHUB_OUTPUT
+          }
+          python scripts/verify_release.py @releaseArgs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: faceflow-source
+          path: ${{ runner.temp }}/faceflow-assets/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish the verified source bundle
+    if: github.event_name == 'push' && github.event.created
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: faceflow-source
+          path: faceflow-assets
+      - name: Create the GitHub Release
+        working-directory: faceflow-assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          TAG_OBJECT: ${{ needs.package.outputs.tag-object }}
+        run: |
+          archive="FaceFlow-${TAG}-source.zip"
+          sha256sum --check "${archive}.sha256"
+          remote_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq '.object.sha')"
+          if [[ -z "$TAG_OBJECT" || "$remote_object" != "$TAG_OBJECT" ]]; then
+            echo 'The remote tag changed during verification.' >&2
+            exit 1
+          fi
+          gh release create "$TAG" "$archive" "${archive}.sha256" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --title "FaceFlow $TAG" \
+            --notes "Download \`$archive\` and follow INSTALL.md inside it. The source bundle was installed and smoke-tested with CPython 3.12.10 on Windows x64."
