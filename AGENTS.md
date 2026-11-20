@@ -26,9 +26,9 @@
 
 ## Оформление репозитория
 
-README основной ветки оформляйте по единому шаблону портфолио: четыре плашки в порядке «Статус → CI → Стек → Демо», одинаковая навигация по шести разделам, одна обложка и два дополнительных экрана в раскрывающемся блоке. Файлы `docs/assets/readme/*.svg` имеют формат 1600×1000 и содержат исходные согласованные скриншоты без изменения интерфейса. Версия, стадия и лицензия указаны в таблице раздела «Статус и ограничения». Сохраняйте этот формат при обновлении снимков и текста.
+Keep the public README concise and in English, with a separate Russian guide. Use the FaceFlow nameplate, CI and Stack badges, and the verified release link. Use current product captures with test data.
 
-Поддерживайте навигацию и шесть разделов [README](README.md) в текущем порядке. Каждая плашка ведёт к фактическому источнику. Для статических сведений используйте Shields.io (`style=flat`, `labelColor=555`), без приватных метаданных и токенов; для CI - родную плашку GitHub Actions после проверки в авторизованном README, иначе ссылку. Не рисуйте статический passing и не назначайте версию, лицензию или точность без основания. После изменения CI дождитесь terminal state окончательного HEAD; покрытие ищите в логах и сводке прогона; HTML/JSON-архив запрашивается явно через `upload_coverage` при ручном запуске. Не подменяйте покрытием качество распознавания. Сверяйте стек, ограничения, скриншоты и ссылки с кодом. Репозиторий остаётся PRIVATE, исторические теги и точки отката сохраняются.
+Link badges to sources. Use the GitHub Actions badge for CI. Verify a run on the final revision after changing CI. Use the run summary for coverage and the `upload_coverage` input for downloadable HTML and JSON. Recognition accuracy requires separate evidence.
 
 ## Передача
 
