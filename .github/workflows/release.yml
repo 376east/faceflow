@@ -22,6 +22,7 @@ jobs:
     outputs:
       tag-object: ${{ steps.preflight.outputs.tag-object }}
       commit: ${{ steps.preflight.outputs.commit }}
+      digests: ${{ steps.seal.outputs.digests }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,33 +32,13 @@ jobs:
         with:
           python-version: '3.12.10'
           architecture: x64
-      - name: Require an annotated tag at green master
+      - name: Require an annotated tag reachable from master with exact push CI
         if: github.event_name == 'push'
         id: preflight
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if ($env:GITHUB_REF_NAME -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
-            throw 'The tag must use vMAJOR.MINOR.PATCH.'
-          }
-          $tagObject = git rev-parse $env:GITHUB_REF
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $type = git cat-file -t $tagObject
-          if ($LASTEXITCODE -or $type -ne 'tag') { throw 'The release tag must be annotated.' }
-          $eventCommit = git rev-parse "$($env:GITHUB_SHA)^{commit}"
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $head = git rev-parse HEAD
-          if ($LASTEXITCODE -or $eventCommit -ne $head) {
-            throw 'The checked-out commit differs from the tag event.'
-          }
-          $master = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/master" --jq '.object.sha'
-          if ($LASTEXITCODE -or $master -ne $head) { throw 'The release tag must point to current master.' }
-          $runs = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=master&event=push&head_sha=$head&per_page=1" --jq '.workflow_runs[0].conclusion'
-          if ($LASTEXITCODE -or $runs -ne 'success') {
-            throw 'The latest push CI for this master SHA must have succeeded.'
-          }
-          "tag-object=$tagObject" >> $env:GITHUB_OUTPUT
-          "commit=$head" >> $env:GITHUB_OUTPUT
+          TAG_PUSH_AFTER: ${{ github.event.after }}
+        run: python scripts/release_gate.py preflight
       - name: Install the pinned Inno Setup compiler on the runner
         id: inno
         run: |
@@ -77,6 +58,10 @@ jobs:
           $releaseArgs = @('--output', (Join-Path $env:RUNNER_TEMP 'faceflow-assets'), '--iscc', $env:ISCC)
           if ($env:GITHUB_EVENT_NAME -eq 'push') { $releaseArgs += @('--tag', $env:GITHUB_REF_NAME) }
           python scripts/verify_release.py @releaseArgs
+      - name: Seal verified asset SHA-256 digests
+        if: github.event_name == 'push'
+        id: seal
+        run: python scripts/release_gate.py seal --assets (Join-Path $env:RUNNER_TEMP 'faceflow-assets')
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: faceflow-release
@@ -89,36 +74,26 @@ jobs:
     if: github.event_name == 'push' && github.event.created
     needs: package
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
+    concurrency:
+      group: publish-stable-release
+      queue: max
     permissions:
       contents: write
+      actions: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.package.outputs.commit }}
+          persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: faceflow-release
           path: faceflow-assets
-      - name: Create the GitHub Release
-        working-directory: faceflow-assets
+      - name: Verify the draft assets and publish as Latest
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           TAG_OBJECT: ${{ needs.package.outputs.tag-object }}
           TAG_COMMIT: ${{ needs.package.outputs.commit }}
-        run: |
-          archive="FaceFlow-${TAG}-source.zip"
-          setup="FaceFlow-${TAG}-Setup-x64.exe"
-          sha256sum --check "${archive}.sha256" "${setup}.sha256"
-          remote_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq '.object.sha')"
-          if [[ -z "$TAG_OBJECT" || "$remote_object" != "$TAG_OBJECT" ]]; then
-            echo 'The remote tag changed during verification.' >&2
-            exit 1
-          fi
-          target="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${TAG_OBJECT}" --jq '.object.sha')"
-          master="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/master" --jq '.object.sha')"
-          if [[ -z "$TAG_COMMIT" || "$target" != "$TAG_COMMIT" || "$master" != "$TAG_COMMIT" ]]; then
-            echo 'Master or the release target differs from the verified commit.' >&2
-            exit 1
-          fi
-          gh release create "$TAG" "$setup" "${setup}.sha256" "$archive" "${archive}.sha256" \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --latest --title "FaceFlow $TAG for Windows" \
-            --notes "Run [FaceFlow Setup for Windows x64](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${setup}) and open FaceFlow from the Start menu. Setup includes the runtime and recognition models. For the source ZIP, follow INSTALL.md. [Инструкция на русском](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/README.ru.md)."
+          SEALED_DIGESTS: ${{ needs.package.outputs.digests }}
+        run: python3 scripts/release_gate.py publish --assets faceflow-assets
