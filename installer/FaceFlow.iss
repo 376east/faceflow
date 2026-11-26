@@ -24,7 +24,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Source: "{#Payload}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\FaceFlow"; Filename: "{app}\runtime\python.exe"; Parameters: "-X utf8 ""{app}\app\launch.py"""; WorkingDir: "{app}\app"
+Name: "{autoprograms}\FaceFlow"; Filename: "{app}\runtime\python.exe"; Parameters: "-B -X utf8 ""{app}\app\launch.py"""; WorkingDir: "{app}\app"
 
 [Run]
-Filename: "{app}\runtime\python.exe"; Parameters: "-X utf8 ""{app}\app\launch.py"""; WorkingDir: "{app}\app"; Description: "{cm:LaunchProgram,FaceFlow}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\runtime\python.exe"; Parameters: "-B -X utf8 ""{app}\app\launch.py"""; WorkingDir: "{app}\app"; Description: "{cm:LaunchProgram,FaceFlow}"; Flags: nowait postinstall skipifsilent

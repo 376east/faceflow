@@ -148,7 +148,7 @@ def build_setup(work, source, iscc, label, version):
 
 
 def smoke_setup(setup, work):
-    installed = work / "installed"
+    installed = work / "installed FaceFlow"
     profile = work / "profile"
     shortcut = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "FaceFlow.lnk"
     setup_flags = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]
@@ -158,7 +158,7 @@ def smoke_setup(setup, work):
         smoke_installed(installed, profile)
     finally:
         subprocess.run([installed / "unins000.exe", *setup_flags], check=True, timeout=120)
-    if shortcut.exists() or (installed / "runtime" / "python.exe").exists() or not (profile / "faceflow.sqlite").exists():
+    if shortcut.exists() or (installed / "runtime").exists() or (installed / "app").exists() or not (profile / "faceflow.sqlite").exists():
         raise RuntimeError("FaceFlow uninstall did not remove the program and preserve the gallery")
 
 
@@ -173,18 +173,23 @@ def verify_shortcut(shortcut, installed):
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
         env=os.environ | {"FACEFLOW_CHECK_SHORTCUT": str(shortcut)}, text=True, timeout=15,
     ))
-    if (
-        Path(link["TargetPath"]) != installed / "runtime" / "python.exe"
-        or link["Arguments"] != f'-X utf8 "{installed / "app" / "launch.py"}"'
-        or Path(link["WorkingDirectory"]) != installed / "app"
+    arguments = re.fullmatch(r'-B\s+-X\s+utf8\s+(?:"([^"]+)"|(\S+))', link["Arguments"])
+    if not arguments:
+        raise RuntimeError(f"Unexpected installed shortcut arguments: {link['Arguments']!r}")
+    expected = installed / "app"
+    for actual, target in (
+        (link["TargetPath"], installed / "runtime" / "python.exe"),
+        (arguments.group(1) or arguments.group(2), expected / "launch.py"),
+        (link["WorkingDirectory"], expected),
     ):
-        raise RuntimeError("The installed Start menu shortcut does not launch FaceFlow")
+        if not Path(actual).exists() or not Path(actual).samefile(target):
+            raise RuntimeError(f"Installed shortcut points to {actual!r}, expected {str(target)!r}")
 
 
 def smoke_installed(installed, profile, open_browser=True):
     env = os.environ | {"FACEFLOW_DATA": str(profile)}
     executable = installed / "runtime" / "python.exe"
-    launch = [executable, "-X", "utf8", installed / "app" / "launch.py"]
+    launch = [executable, "-B", "-X", "utf8", installed / "app" / "launch.py"]
     port = 8765
     if not open_browser:
         with socket.socket() as listener:
