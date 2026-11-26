@@ -20,6 +20,6 @@ FaceFlow helps guests find their event photos with a selfie. The photographer ma
 
 ## Project links
 
-FaceFlow's own source code is published without a declared license. Third-party components retain their own licenses. [Third-party licenses](THIRD_PARTY.md)
+FaceFlow's code is MIT-licensed. Third-party components, brand assets, and synthetic test images have separate terms or are excluded. [MIT license](LICENSE) · [License scope and third-party notices](THIRD_PARTY.md)
 
 [Changelog](CHANGELOG.md) · [Dependencies](requirements.txt) · [Report an issue](https://github.com/376east/faceflow/issues)
