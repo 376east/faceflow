@@ -1,6 +1,9 @@
 """Actual OpenCV inference with synthetic fixtures; this is not an accuracy benchmark."""
 import importlib.util
+import http.client
 import io
+from ipaddress import IPv4Interface
+import json
 import os
 import sqlite3
 import sys
@@ -8,6 +11,8 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+from urllib.parse import urlsplit
+from contextlib import closing
 import zipfile
 import threading
 from unittest.mock import patch
@@ -72,6 +77,82 @@ class Flow(unittest.TestCase):
 
     def search(self, event_id, guest, image, consent='yes'):
         return self.client.post('/api/events/'+event_id+'/search',headers=guest,data={'selfie':(io.BytesIO(jpg(image)),'selfie.jpg'),'consent':consent})
+
+    def test_phone_share_is_temporary_guest_only_and_one_shoot(self):
+        event_id, local_guest = self.create('Phone guest gallery')
+        other_event, _ = self.create('Private second gallery')
+        path = f'/api/events/{event_id}'
+        self.addCleanup(module.guest_listener.stop)
+        self.assertEqual(self.upload(event_id, jpg(self.alpha)).status_code, 201)
+        local_info = self.wait(event_id)
+        admin_media = local_info['photos'][0]['download']
+        self.assertEqual(self.client.get(admin_media).status_code, 200)
+        self.assertEqual(self.client.get('/api/events', headers=self.admin,
+                                         environ_overrides={'REMOTE_ADDR': '192.168.10.32'}).status_code, 403)
+        # Connect over a real local socket without exposing test data to the runner's LAN.
+        with patch.object(module, 'interfaces', return_value=[IPv4Interface('127.0.0.1/8')]):
+            self.assertIsNone(self.client.get(path+'/lan', headers=self.admin).json['share'])
+            start = self.client.post(path+'/lan', headers=self.admin, json={'address': '127.0.0.1'})
+        self.assertEqual(start.status_code, 201, start.json)
+        url = urlsplit(start.json['share']['url'])
+        remote_guest = {'X-Guest-Key': url.fragment.removeprefix('g=')}
+        self.assertNotEqual(local_guest, remote_guest)
+        with closing(http.client.HTTPConnection(url.hostname, url.port, timeout=5)) as conn:
+            def get(target, headers=None):
+                conn.request('GET', target, headers=headers or {})
+                response = conn.getresponse()
+                content = response.read()
+                return response.status, content
+
+            self.assertEqual(get(url.path)[0], 200)
+            self.assertEqual(get(url.path, {'Host': 'other.invalid'})[0], 403)
+            self.assertEqual(get(path, local_guest)[0], 403)
+            self.assertEqual(get(f'/api/events/{other_event}', remote_guest)[0], 403)
+            self.assertEqual(get('/api/events', self.admin)[0], 403)
+            self.assertEqual(get(path, self.admin)[0], 403)
+            self.assertEqual(get(admin_media)[0], 403)
+            self.assertEqual(get(path, remote_guest)[0], 200)
+
+            boundary = 'faceflow-test-boundary'
+            selfie = (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="consent"\r\n\r\nyes\r\n'
+                f'--{boundary}\r\nContent-Disposition: form-data; name="selfie"; filename="selfie.jpg"\r\n'
+                'Content-Type: image/jpeg\r\n\r\n'
+            ).encode() + jpg(self.alpha) + f'\r\n--{boundary}--\r\n'.encode()
+            conn.request('POST', path+'/search', selfie, remote_guest | {
+                'Content-Type': f'multipart/form-data; boundary={boundary}',
+            })
+            response = conn.getresponse()
+            payload = json.loads(response.read())
+            self.assertEqual(response.status, 200, payload)
+            self.assertEqual(payload['count'], 1)
+            self.assertEqual(get(payload['photos'][0]['download'])[0], 200)
+            self.assertEqual(get(payload['zip'])[0], 200)
+            self.assertEqual(self.client.get(payload['zip']).status_code, 403)
+            self.assertEqual(self.client.get(path, headers=remote_guest).status_code, 403)
+            self.assertEqual(self.client.patch(path, headers=self.admin, json={'status': 'paused'}).status_code, 200)
+        self.assertIsNone(module.guest_listener.current(event_id))
+        with closing(http.client.HTTPConnection(url.hostname, url.port, timeout=2)) as expired:
+            with self.assertRaises(OSError):
+                expired.request('GET', url.path)
+
+    def test_phone_share_expiry_closes_listener(self):
+        interface = IPv4Interface('127.0.0.1/8')
+        event_id, _ = self.create('Expiring phone link')
+        self.addCleanup(module.guest_listener.stop)
+        with patch('lan.SHARE_SECONDS', .1):
+            share = module.guest_listener.start(module.app, interface, event_id, 0)
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            with closing(http.client.HTTPConnection(str(interface.ip), share.port, timeout=.2)) as conn:
+                try:
+                    conn.connect()
+                except OSError:
+                    break
+            time.sleep(.05)
+        else:
+            self.fail('Guest port remained open after the share expired')
+        self.assertIsNone(module.guest_listener.current(event_id))
 
     def test_large_closeup_selfie_is_found(self):
         import recognition

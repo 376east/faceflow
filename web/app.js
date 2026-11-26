@@ -38,6 +38,44 @@ function galleryProgress(e){
 }
 function badge(s){return '<span class="badge '+esc(s||'draft')+'">'+({published:'Опубликована',paused:'На паузе',draft:'Черновик'})[s||'draft']+'</span>';}
 function guestLink(id,key){return location.origin+'/e/'+id+'#g='+key;}
+function bindPhoneSharing(id, panel){
+  if(!panel)return;
+  const endpoint='/api/events/'+id+'/lan', body=q('[data-phone-content]',panel);
+  let running=false;
+  panel.addEventListener('toggle',()=>{if(panel.open)update();});
+  async function update(method,address){
+    if(running)return;
+    running=true;body.setAttribute('aria-busy','true');
+    let active;
+    try{
+      if(method)await api(endpoint,{method,...(address?{body:{address}}:{})});
+      active=await api(endpoint);
+      if(!body.isConnected)return;
+      if(active.share){
+        const url=esc(active.share.url);
+        body.innerHTML='<p>Доступ открыт ещё около '+Math.ceil(active.share.expires_in/60)+' мин.</p><div class="share-link">'+url+'</div><div class="actions"><button type="button" data-phone-copy>Скопировать ссылку для телефона</button><button type="button" class="danger" data-phone-stop>Закрыть доступ</button></div><p data-phone-status role="status"></p>';
+        q('[data-phone-stop]',body).onclick=()=>update('DELETE');
+        q('[data-phone-copy]',body).onclick=async()=>{
+          try{await navigator.clipboard.writeText(active.share.url);q('[data-phone-status]',body).textContent='Ссылка скопирована.';}
+          catch{q('[data-phone-status]',body).textContent='Скопируйте ссылку из поля выше.';}
+        };
+        setTimeout(()=>{if(body.isConnected&&panel.open)update();},1000*Math.max(1,active.share.expires_in));
+      }else if(active.addresses.length){
+        body.innerHTML='<label>Локальный IP этого компьютера<select data-phone-address>'+active.addresses.map(ip=>'<option>'+esc(ip)+'</option>').join('')+'</select></label><div class="actions"><button type="button" data-phone-start>Открыть доступ на 30 минут</button></div><p data-phone-status role="status"></p>';
+        q('[data-phone-start]',body).onclick=()=>update('POST',q('[data-phone-address]',body).value);
+      }else{
+        body.textContent='Подключите этот компьютер к локальной сети и откройте этот раздел снова.';
+      }
+    }catch(error){
+      if(!body.isConnected)return;
+      const notice=q('[data-phone-status]',body);
+      if(notice)notice.textContent=error.message;
+      else body.textContent=error.message;
+    }finally{
+      running=false;body.removeAttribute('aria-busy');
+    }
+  }
+}
 function setFaceMarker(marker,style){
   if(!marker)return;
   marker.hidden=!style;
@@ -122,7 +160,15 @@ async function changeSharing(action){
   catch(x){message=x.message;error=true;}
   finally{sharingBusy=false;if(q('#sharing')===box){box.removeAttribute('aria-busy');share(event);if(message)stat('share-status',message,error?'error':'ok');}}
 }
-function share(e){if(sharingBusy)return;const published=e.status==='published',url=guestLink(id,e.guest),box=q('#sharing'),headerBadge=q('.page-head .badge');if(headerBadge)headerBadge.outerHTML=badge(e.status);box.innerHTML='<h2>'+(published?'Ссылка для гостей':'Публикация')+'</h2>'+(published?'<p class="muted">Гости смогут загрузить селфи и увидеть найденные фотографии.</p><div class="share-link">'+esc(url)+'</div><div class="actions"><button id="copy">Скопировать ссылку</button><a class="button secondary" href="'+esc(url)+'" target="_blank" rel="noopener">Открыть</a><button class="secondary" id="rotate">Обновить ссылку</button><button class="danger" id="toggle">Поставить на паузу</button></div>':'<p class="muted">После обработки фотографий здесь появится ссылка для гостей. Нажмите «Опубликовать», чтобы открыть доступ.</p><button id="toggle" '+(e.pending||uploading||!e.ready?'disabled':'')+'>Опубликовать</button>')+'<p id="share-status" class="status" aria-live="polite"></p>';q('#toggle',box).onclick=()=>changeSharing(async()=>{const status=published?'paused':'published';await api('/api/events/'+id,{method:'PATCH',body:{status}});event={...event,status};return '';});q('#copy',box)?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(url);stat('share-status','Ссылка скопирована.','ok');}catch{stat('share-status','Скопируйте ссылку из поля выше.','error');}});q('#rotate',box)?.addEventListener('click',()=>changeSharing(async()=>{if(!await confirmAction('Старая ссылка для гостей перестанет работать. Продолжить?'))return null;event.guest=(await api('/api/events/'+id+'/rotate-link',{method:'POST'})).guest;return 'Ссылка обновлена.';}));}
+function share(e){if(sharingBusy)return;const published=e.status==='published',url=guestLink(id,e.guest),box=q('#sharing'),headerBadge=q('.page-head .badge');if(headerBadge)headerBadge.outerHTML=badge(e.status);const phonePanel=box.querySelector?.('[data-phone-panel]');box.innerHTML='<h2>'+(published?'Ссылка для гостей':'Публикация')+'</h2>'+(published?'<p class="muted">Гости смогут загрузить селфи и увидеть найденные фотографии.</p><div class="share-link">'+esc(url)+'</div><div class="actions"><button id="copy">Скопировать ссылку</button><a class="button secondary" href="'+esc(url)+'" target="_blank" rel="noopener">Открыть</a><button class="secondary" id="rotate">Обновить ссылку</button><button class="danger" id="toggle">Поставить на паузу</button></div>':'<p class="muted">После обработки фотографий здесь появится ссылка для гостей. Нажмите «Опубликовать», чтобы открыть доступ.</p><button id="toggle" '+(e.pending||uploading||!e.ready?'disabled':'')+'>Опубликовать</button>')+'<p id="share-status" class="status" aria-live="polite"></p>';q('#toggle',box).onclick=()=>changeSharing(async()=>{const status=published?'paused':'published';await api('/api/events/'+id,{method:'PATCH',body:{status}});event={...event,status};return '';});q('#copy',box)?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(url);stat('share-status','Ссылка скопирована.','ok');}catch{stat('share-status','Скопируйте ссылку из поля выше.','error');}});q('#rotate',box)?.addEventListener('click',()=>changeSharing(async()=>{if(!await confirmAction('Старая ссылка для гостей перестанет работать. Продолжить?'))return null;event.guest=(await api('/api/events/'+id+'/rotate-link',{method:'POST'})).guest;return 'Ссылка обновлена.';}));
+if(published&&box.insertAdjacentHTML){
+  if(phonePanel)box.append(phonePanel);
+  else{
+    box.insertAdjacentHTML('beforeend','<details data-phone-panel><summary>Доступ с телефона</summary><p class="muted">Телефоны должны быть в той же доверенной сети. Фотографии и селфи передаются по HTTP без шифрования.</p><div data-phone-content></div></details>');
+    bindPhoneSharing(id,q('[data-phone-panel]',box));
+  }
+}
+}
 const galleryNode=q('#gallery'),refreshButton=document.createElement('button');
 refreshButton.id='refresh-gallery';refreshButton.type='button';refreshButton.className='text-button';refreshButton.textContent='Обновить состояние';q('#gallery-status').tabIndex=-1;q('#gallery-status').after(refreshButton);
 let refreshing=false,refreshFailed=false;

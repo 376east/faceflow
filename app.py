@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import io
 import json
 import logging
@@ -20,10 +21,11 @@ from contextlib import contextmanager
 
 import cv2
 import numpy as np
-from flask import Flask, Request, abort, jsonify, request, send_file, send_from_directory
+from flask import Flask, Request, abort, has_request_context, jsonify, request, send_file, send_from_directory
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from PIL import Image, ImageOps, UnidentifiedImageError
 from recognition import analyze, verify_models
+from lan import GuestListener, REQUEST_LIMITS, interfaces
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get('FACEFLOW_DATA', str(ROOT / 'data'))).resolve()
@@ -44,6 +46,7 @@ class MemoryUploadRequest(Request):
 app = Flask(__name__, static_folder=None)
 app.request_class = MemoryUploadRequest
 app.config['MAX_CONTENT_LENGTH'] = 26 * 1024 * 1024
+guest_listener = GuestListener()
 Image.MAX_IMAGE_PIXELS = 50_000_000
 warnings.simplefilter('error', Image.DecompressionBombWarning)
 lock = threading.RLock()
@@ -240,7 +243,8 @@ def requeue(event_id,only_errors=False):
 
 
 def admin():
-    if not secrets.compare_digest(request.headers.get('X-Admin-Key', ''), CONFIG['admin']):
+    key = request.headers.get('X-Admin-Key', '').encode('utf-8')
+    if request.remote_addr != '127.0.0.1' or request.environ.get('faceflow.guest_share') or not hmac.compare_digest(key, CONFIG['admin'].encode()):
         abort(403)
 
 
@@ -249,8 +253,14 @@ def event(event_id, guest=False):
         row = conn.execute('SELECT * FROM events WHERE id=?', (event_id,)).fetchone()
     if not row:
         abort(404)
-    if guest and not secrets.compare_digest(request.headers.get('X-Guest-Key', ''), row['guest']):
-        abort(403)
+    if guest:
+        share = request.environ.get('faceflow.guest_share')
+        if share and (guest_listener.current(event_id) is not share or
+                      row['status'] != 'published' or row['link_version'] != share.version):
+            abort(403)
+        expected = share.key if share else row['guest']
+        if not hmac.compare_digest(request.headers.get('X-Guest-Key', '').encode('utf-8'), expected.encode()):
+            abort(403)
     return row
 
 
@@ -267,7 +277,9 @@ def summary(event_id):
 
 def make_ticket(event_id,photos,admin_access=False,version=None):
     if version is None:version=event(event_id)['link_version']
-    return signer.dumps({'event':event_id,'photos':photos,'version':version,'admin':admin_access})
+    share = request.environ.get('faceflow.guest_share') if has_request_context() else None
+    return signer.dumps({'event':event_id,'photos':photos,'version':version,'admin':admin_access,
+                         'share':share.identity if share else None})
 
 
 def photo_url(event_id, photo_id, thumb=False,admin_access=False,version=None):
@@ -292,6 +304,22 @@ def headers(response):
 def error_response(error):
     messages = {400: 'Некорректный запрос.', 403: 'Нет доступа. Откройте полную ссылку.', 404: 'Съёмка или файл не найдены.', 413: 'Файл слишком большой. Максимум 25 МБ.', 500: 'Ошибка обработки. Попробуйте ещё раз.'}
     return jsonify(error=messages.get(error.code, 'Ошибка запроса.')), error.code
+
+
+@app.before_request
+def enforce_guest_listener():
+    share = request.environ.get('faceflow.guest_share')
+    if share is None:
+        return
+    if request.headers.get('X-Admin-Key') or request.endpoint not in {
+        'page', 'assets', 'get_event', 'search', 'media', 'download', 'feedback',
+    }:
+        abort(403)
+    if request.endpoint != 'assets' and request.view_args.get('event_id') != share.event_id:
+        abort(403)
+    current = event(share.event_id)
+    if current['status'] != 'published' or current['link_version'] != share.version:
+        abort(403)
 
 
 @app.get('/')
@@ -389,6 +417,8 @@ def update_event(event_id):
                 conn.execute(f'UPDATE events SET {assignments} WHERE id=?',(*fields.values(),event_id))
             changed_detail='detailed' in fields and fields['detailed']!=old['detailed']
         if changed_detail:requeue(event_id)
+    if fields.get('status') in {'draft', 'paused'}:
+        guest_listener.stop(event_id)
     return jsonify(ok=True,reindexed=changed_detail)
 
 
@@ -399,7 +429,39 @@ def rotate_link(event_id):
         event(event_id)
         key=secrets.token_urlsafe(24)
         conn.execute('UPDATE events SET guest=?,link_version=link_version+1 WHERE id=?',(key,event_id))
+    guest_listener.stop(event_id)
     return jsonify(guest=key)
+
+
+@app.route('/api/events/<event_id>/lan', methods=['GET', 'POST', 'DELETE'])
+def share_on_lan(event_id):
+    admin()
+    if request.method == 'DELETE':
+        guest_listener.stop(event_id)
+        return jsonify(share=None)
+    available = interfaces()
+    if request.method == 'GET':
+        event(event_id)
+        share = guest_listener.current(event_id)
+        return jsonify(addresses=sorted({str(item.ip) for item in available}),
+                       share=share.as_json() if share else None)
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        abort(400)
+    interface = next((item for item in available if str(item.ip) == body.get('address')), None)
+    if interface is None:
+        return jsonify(error='Выберите IPv4-адрес этого компьютера в локальной сети.'), 400
+    with lock:
+        current = event(event_id)
+        if current['status'] != 'published':
+            return jsonify(error='Сначала опубликуйте съёмку.'), 409
+        try:
+            share = guest_listener.start(app, interface, event_id, current['link_version'])
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
+        except OSError:
+            return jsonify(error='Не удалось открыть доступ на этом сетевом интерфейсе.'), 409
+    return jsonify(share=share.as_json()), 201
 
 
 @app.post('/api/events/<event_id>/retry')
@@ -510,6 +572,11 @@ def access_ticket(event_id,token=None):
         if value['event'] != event_id or not isinstance(value['photos'], list):
             abort(403)
         current=event(event_id)
+        share = request.environ.get('faceflow.guest_share')
+        if value.get('share') != (share.identity if share else None) or (
+            share and (value.get('admin') or guest_listener.current(event_id) is not share)
+        ):
+            abort(403)
         if value.get('version')!=current['link_version'] or (not value.get('admin') and current['status']!='published'):abort(403)
         return value['photos']
     except (BadSignature, SignatureExpired, KeyError, TypeError):
@@ -572,6 +639,7 @@ def feedback(event_id):
 def delete_event(event_id):
     admin()
     remove_storage(event_id)
+    guest_listener.stop(event_id)
     return jsonify(ok=True)
 
 
@@ -640,8 +708,8 @@ if __name__ == '__main__':
                     time.sleep(.1)
         threading.Thread(target=open_browser, daemon=True).start()
     try:
-        serve(app, host='127.0.0.1', port=args.port, threads=4,
-              max_request_body_size=26 * 1024**2, inbuf_overflow=28 * 1024**2)
+        serve(app, host='127.0.0.1', port=args.port, **REQUEST_LIMITS)
     finally:
+        guest_listener.stop()
         pool.shutdown(wait=True)
         instance_guard.close()
