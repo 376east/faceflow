@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added Windows x64 Setup with the runtime and recognition models bundled.
+- Added opt-in, time-limited phone access for guests on a trusted local network. Photographer controls stay on loopback.
+- Licensed FaceFlow's source code and documentation under MIT with separate notices for third-party components and exclusions for brand assets and test imagery.
+
 ## [0.1.0](https://github.com/376east/faceflow/releases/tag/v0.1.0)
 
 - Added a local photographer workspace to create shoots, upload and index photos, and publish or pause guest galleries.

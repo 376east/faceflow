@@ -1,4 +1,4 @@
-"""Build a source ZIP from HEAD and smoke-test its Windows install."""
+"""Build and smoke-test the FaceFlow Windows release files from HEAD."""
 
 import argparse
 import hashlib
@@ -14,13 +14,20 @@ import sys
 import sysconfig
 import tempfile
 import time
+import urllib.request
 import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EMBED_URL = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip"
+PYTHON_EMBED_SHA256 = "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
 RUNTIME_FILES = (
     "INSTALL.md",
+    "LICENSE",
+    "THIRD_PARTY.md",
+    "docs/WINDOWS.md",
     "app.py",
+    "lan.py",
     "recognition.py",
     "requirements.txt",
     "requirements-windows.lock",
@@ -105,6 +112,98 @@ def smoke(directory):
             server.wait(timeout=10)
 
 
+def build_setup(work, source, iscc, label, version):
+    payload = work / "payload"
+    runtime = payload / "runtime"
+    application = payload / "app"
+    archive = work / "python-embed.zip"
+    urllib.request.urlretrieve(PYTHON_EMBED_URL, archive)
+    if hashlib.sha256(archive.read_bytes()).hexdigest() != PYTHON_EMBED_SHA256:
+        raise RuntimeError("The embeddable Python ZIP checksum differs")
+    with zipfile.ZipFile(archive) as bundle:
+        bundle.extractall(runtime)
+    (runtime / "python312._pth").write_text(
+        "python312.zip\n.\nsite-packages\n..\\app\n", encoding="ascii",
+    )
+    subprocess.run([
+        sys.executable, "-m", "pip", "install", "--only-binary=:all:", "--require-hashes",
+        "--no-compile", "--target", runtime / "site-packages", "-r", source / "requirements-windows.lock",
+    ], check=True, timeout=360)
+    manifest = json.loads((source / "models" / "manifest.json").read_text(encoding="utf-8"))
+    weights = [Path("models") / entry["file"] for entry in manifest["models"]]
+    for path in [*RUNTIME_FILES, *weights]:
+        destination = application / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / path, destination)
+    shutil.copyfile(ROOT / "installer" / "launch.py", application / "launch.py")
+    name = f"FaceFlow-{label}-Setup-x64"
+    smoke_installed(payload, work / "staged-profile", open_browser=False)
+    if iscc is None:
+        return None
+    subprocess.run([
+        str(iscc), f"/DAppVersion={version}", f"/DBuildOutput={work}",
+        f"/DOutputName={name}", f"/DPayload={payload}", str(ROOT / "installer" / "FaceFlow.iss"),
+    ], check=True, timeout=360)
+    return work / f"{name}.exe"
+
+
+def smoke_setup(setup, work):
+    installed = work / "installed FaceFlow"
+    profile = work / "profile"
+    shortcut = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "FaceFlow.lnk"
+    setup_flags = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]
+    subprocess.run([setup, *setup_flags, f"/DIR={installed}"], check=True, timeout=120)
+    try:
+        verify_shortcut(shortcut, installed)
+        smoke_installed(installed, profile)
+    finally:
+        subprocess.run([installed / "unins000.exe", *setup_flags], check=True, timeout=120)
+    if shortcut.exists() or (installed / "runtime").exists() or (installed / "app").exists() or not (profile / "faceflow.sqlite").exists():
+        raise RuntimeError("FaceFlow uninstall did not remove the program and preserve the gallery")
+
+
+def verify_shortcut(shortcut, installed):
+    if not shortcut.is_file():
+        raise RuntimeError("Setup did not create its Start menu shortcut")
+    command = (
+        '$link=(New-Object -ComObject WScript.Shell).CreateShortcut($env:FACEFLOW_CHECK_SHORTCUT); '
+        '$link | Select-Object TargetPath,Arguments,WorkingDirectory | ConvertTo-Json -Compress'
+    )
+    link = json.loads(subprocess.check_output(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+        env=os.environ | {"FACEFLOW_CHECK_SHORTCUT": str(shortcut)}, text=True, timeout=15,
+    ))
+    arguments = re.fullmatch(r'-B\s+-X\s+utf8\s+(?:"([^"]+)"|(\S+))', link["Arguments"])
+    if not arguments:
+        raise RuntimeError(f"Unexpected installed shortcut arguments: {link['Arguments']!r}")
+    expected = installed / "app"
+    for actual, target in (
+        (link["TargetPath"], installed / "runtime" / "python.exe"),
+        (arguments.group(1) or arguments.group(2), expected / "launch.py"),
+        (link["WorkingDirectory"], expected),
+    ):
+        if not Path(actual).exists() or not Path(actual).samefile(target):
+            raise RuntimeError(f"Installed shortcut points to {actual!r}, expected {str(target)!r}")
+
+
+def smoke_installed(installed, profile, open_browser=True):
+    env = os.environ | {"FACEFLOW_DATA": str(profile)}
+    executable = installed / "runtime" / "python.exe"
+    launch = [executable, "-B", "-X", "utf8", installed / "app" / "launch.py"]
+    port = 8765
+    if not open_browser:
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        launch += ["--port", str(port)]
+    with subprocess.Popen(launch, cwd=installed / "app", env=env, stdout=subprocess.DEVNULL) as server:
+        try:
+            verify_server(server, port, profile)
+        finally:
+            server.terminate()
+            server.wait(timeout=10)
+
+
 def verify_server(server, port, data):
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline and server.poll() is None:
@@ -137,8 +236,10 @@ def verify_server(server, port, data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True, help="directory for the verified ZIP and checksum")
+    parser.add_argument("--output", type=Path, required=True, help="directory for verified release files")
     parser.add_argument("--tag", help="annotated release tag at HEAD, omitted for a preview")
+    parser.add_argument("--iscc", type=Path, help="build the Windows Setup using this Inno Setup compiler")
+    parser.add_argument("--embedded-only", action="store_true", help="verify the embedded runtime without Setup")
     args = parser.parse_args()
     if (
         sys.implementation.name != "cpython"
@@ -166,13 +267,21 @@ def main():
         archive = directory / f"{name}.zip"
         git("archive", "--format=zip", f"--prefix={name}/", f"--output={archive}",
             commit, "--", *RUNTIME_FILES)
+        source = directory / name
         verify_zip(archive, name, directory)
-        smoke(directory / name)
+        smoke(source)
+        assets = [archive]
+        if args.iscc or args.embedded_only:
+            setup = build_setup(directory, source, args.iscc, version, args.tag[1:] if args.tag else "0.0.0")
+            if setup:
+                smoke_setup(setup, directory)
+                assets.append(setup)
         output.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(archive, output / archive.name)
-        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-        (output / f"{archive.name}.sha256").write_text(f"{digest}  {archive.name}\n", encoding="ascii")
-        print(f"Verified {archive.name} from {commit}")
+        for asset in assets:
+            shutil.copyfile(asset, output / asset.name)
+            digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+            (output / f"{asset.name}.sha256").write_text(f"{digest}  {asset.name}\n", encoding="ascii")
+            print(f"Packaged {asset.name} from {commit}")
 
 
 if __name__ == "__main__":

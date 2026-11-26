@@ -18,4 +18,6 @@ FaceFlow opens at `http://127.0.0.1:8765`. If the browser does not open, use the
 
 FaceFlow stores galleries and credentials in `data/` by default. Keep that folder private. Back it up separately before moving to a new version. Search and photo downloads run locally. Loopback access limits gallery links to the computer running FaceFlow.
 
-Third-party terms are provided with [YuNet](models/YuNet-LICENSE.txt), [SFace](models/SFace-LICENSE.txt), and the [browser assets](web/vendor/). Installed Python packages carry their own license files. The FaceFlow source has no declared open-source license.
+See the [Windows guide](docs/WINDOWS.md) for installing with Setup and sharing a shoot with phones on your local network.
+
+The FaceFlow code is licensed under the [MIT license](LICENSE). See the [license scope and third-party notices](THIRD_PARTY.md) for the models, browser assets, and Python runtime.
