@@ -53,7 +53,8 @@ function bindPhoneSharing(id, panel){
       if(!body.isConnected)return;
       if(active.share){
         const url=esc(active.share.url);
-        body.innerHTML='<p>Доступ открыт ещё около '+Math.ceil(active.share.expires_in/60)+' мин.</p><div class="share-link">'+url+'</div><div class="actions"><button type="button" data-phone-copy>Скопировать ссылку для телефона</button><button type="button" class="danger" data-phone-stop>Закрыть доступ</button></div><p data-phone-status role="status"></p>';
+        const until=new Date(Date.now()+1000*active.share.expires_in).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        body.innerHTML='<p>Доступ открыт до '+esc(until)+'.</p><div class="share-link">'+url+'</div><div class="actions"><button type="button" data-phone-copy>Скопировать ссылку для телефона</button><button type="button" class="danger" data-phone-stop>Закрыть доступ</button></div><p data-phone-status role="status"></p>';
         q('[data-phone-stop]',body).onclick=()=>update('DELETE');
         q('[data-phone-copy]',body).onclick=async()=>{
           try{await navigator.clipboard.writeText(active.share.url);q('[data-phone-status]',body).textContent='Ссылка скопирована.';}
@@ -61,8 +62,13 @@ function bindPhoneSharing(id, panel){
         };
         setTimeout(()=>{if(body.isConnected&&panel.open)update();},1000*Math.max(1,active.share.expires_in));
       }else if(active.addresses.length){
-        body.innerHTML='<label>Локальный IP этого компьютера<select data-phone-address>'+active.addresses.map(ip=>'<option>'+esc(ip)+'</option>').join('')+'</select></label><div class="actions"><button type="button" data-phone-start>Открыть доступ на 30 минут</button></div><p data-phone-status role="status"></p>';
-        q('[data-phone-start]',body).onclick=()=>update('POST',q('[data-phone-address]',body).value);
+        const choose=active.addresses.length>1;
+        const options=(choose?'<option value="" selected disabled>Выберите интерфейс</option>':'')+active.addresses.map(ip=>'<option>'+esc(ip)+'</option>').join('');
+        body.innerHTML='<label>Локальный IP этого компьютера<select data-phone-address>'+options+'</select></label><div class="actions"><button type="button" data-phone-start>Открыть доступ на 30 минут</button></div><p data-phone-status role="status"></p>';
+        const select=q('[data-phone-address]',body),start=q('[data-phone-start]',body);
+        start.disabled=choose;
+        select.onchange=()=>{start.disabled=!select.value;};
+        start.onclick=()=>update('POST',select.value);
       }else{
         body.textContent='Подключите этот компьютер к локальной сети и откройте этот раздел снова.';
       }

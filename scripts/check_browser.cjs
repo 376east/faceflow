@@ -80,6 +80,28 @@ async function main(){
     await shot(admin,'browser-admin');
     await admin.getByRole('button',{name:'Опубликовать',exact:true}).click();
     const guestUrl=await admin.getByRole('link',{name:'Открыть',exact:true}).getAttribute('href');secrets.push(new URLSearchParams(new URL(guestUrl).hash.slice(1)).get('g'));
+    const phone=admin.locator('[data-phone-panel]');
+    await phone.getByText('Доступ с телефона',{exact:true}).click();
+    assert.match(await phone.innerText(),/HTTP без шифрования/);
+    await waitFor(async()=>Boolean(await phone.locator('[data-phone-content]').innerText()));
+    assert.equal(await phone.locator('[data-phone-stop]').count(),0,'LAN must be closed by default');
+    const addresses=phone.locator('[data-phone-address] option:not([disabled])');
+    if(await addresses.count()){
+      await phone.locator('[data-phone-address]').selectOption(await addresses.first().innerText());
+      await phone.getByRole('button',{name:'Открыть доступ на 30 минут'}).click();
+      const link=phone.locator('.share-link');
+      await link.waitFor();
+      const remoteUrl=await link.innerText();
+      const remote=new URL(remoteUrl);
+      secrets.push(new URLSearchParams(remote.hash.slice(1)).get('g'));
+      assert.notEqual(remote.hostname,'127.0.0.1');
+      assert.notEqual(remote.hash,new URL(guestUrl).hash);
+      await phone.getByRole('button',{name:'Закрыть доступ'}).click();
+      await phone.getByRole('button',{name:'Открыть доступ на 30 минут'}).waitFor();
+      report.phoneShare='Published shoot starts and closes through the host browser UI';
+    }else{
+      report.phoneShare='No eligible private Windows IPv4; opt-in panel rendered';
+    }
     for(const mode of [{name:'desktop',width:1280,height:800,reduce:false,zoom:1},{name:'zoom-200',width:1280,height:800,reduce:false,zoom:2},{name:'reduced',width:1280,height:800,reduce:true,zoom:1},{name:'mobile-390',width:390,height:844,reduce:true,zoom:1},{name:'mobile-320',width:320,height:700,reduce:true,zoom:1}]){
       const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
       await page.setViewportSize({width:mode.width,height:mode.height});await page.emulateMedia({reducedMotion:mode.reduce?'reduce':'no-preference'});

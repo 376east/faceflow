@@ -120,5 +120,5 @@ jobs:
             exit 1
           fi
           gh release create "$TAG" "$setup" "${setup}.sha256" "$archive" "${archive}.sha256" \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --title "FaceFlow $TAG for Windows" \
-            --notes "Run \`$setup\` and open FaceFlow from the Start menu. Setup includes the runtime and recognition models. For the source ZIP, follow INSTALL.md. [Инструкция на русском](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/README.ru.md)."
+            --repo "$GITHUB_REPOSITORY" --verify-tag --latest --title "FaceFlow $TAG for Windows" \
+            --notes "Run [FaceFlow Setup for Windows x64](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${setup}) and open FaceFlow from the Start menu. Setup includes the runtime and recognition models. For the source ZIP, follow INSTALL.md. [Инструкция на русском](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/README.ru.md)."

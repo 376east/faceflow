@@ -150,14 +150,35 @@ def build_setup(work, source, iscc, label, version):
 def smoke_setup(setup, work):
     installed = work / "installed"
     profile = work / "profile"
+    shortcut = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "FaceFlow.lnk"
     setup_flags = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]
     subprocess.run([setup, *setup_flags, f"/DIR={installed}"], check=True, timeout=120)
     try:
+        verify_shortcut(shortcut, installed)
         smoke_installed(installed, profile)
     finally:
         subprocess.run([installed / "unins000.exe", *setup_flags], check=True, timeout=120)
-    if (installed / "runtime" / "python.exe").exists() or not (profile / "faceflow.sqlite").exists():
+    if shortcut.exists() or (installed / "runtime" / "python.exe").exists() or not (profile / "faceflow.sqlite").exists():
         raise RuntimeError("FaceFlow uninstall did not remove the program and preserve the gallery")
+
+
+def verify_shortcut(shortcut, installed):
+    if not shortcut.is_file():
+        raise RuntimeError("Setup did not create its Start menu shortcut")
+    command = (
+        '$link=(New-Object -ComObject WScript.Shell).CreateShortcut($env:FACEFLOW_CHECK_SHORTCUT); '
+        '$link | Select-Object TargetPath,Arguments,WorkingDirectory | ConvertTo-Json -Compress'
+    )
+    link = json.loads(subprocess.check_output(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+        env=os.environ | {"FACEFLOW_CHECK_SHORTCUT": str(shortcut)}, text=True, timeout=15,
+    ))
+    if (
+        Path(link["TargetPath"]) != installed / "runtime" / "python.exe"
+        or link["Arguments"] != f'-X utf8 "{installed / "app" / "launch.py"}"'
+        or Path(link["WorkingDirectory"]) != installed / "app"
+    ):
+        raise RuntimeError("The installed Start menu shortcut does not launch FaceFlow")
 
 
 def smoke_installed(installed, profile, open_browser=True):
